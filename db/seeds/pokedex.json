@@ -1,0 +1,13 @@
+[
+  {"dex_number": 150, "name": "Mewtwo", "types": ["psychic"], "sprite_url": null},
+  {"dex_number": 150, "name": "Mewtwo", "form": "normal", "variant": "MEGA", "types": ["psychic"], "sprite_url": null},
+  {"dex_number": 157, "name": "Typhlosion", "types": ["fire"], "sprite_url": null},
+  {"dex_number": 382, "name": "Kyogre", "types": ["water"], "sprite_url": null},
+  {"dex_number": 383, "name": "Groudon", "types": ["ground"], "sprite_url": null},
+  {"dex_number": 384, "name": "Rayquaza", "types": ["dragon", "flying"], "sprite_url": null},
+  {"dex_number": 716, "name": "Xerneas", "types": ["fairy"], "sprite_url": null},
+  {"dex_number": 717, "name": "Yveltal", "types": ["dark", "flying"], "sprite_url": null},
+  {"dex_number": 71, "name": "Victreebel", "types": ["grass", "poison"], "sprite_url": null},
+  {"dex_number": 642, "name": "Thundurus", "types": ["electric", "flying"], "sprite_url": null},
+  {"dex_number": 28, "name": "Sandslash", "types": ["ground"], "sprite_url": null}
+]

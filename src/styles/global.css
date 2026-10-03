@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+.detail-row.hidden {
+  display: none;
+}
+
+@media (hover: hover) {
+  .boss-row:hover + .detail-row,
+  .boss-row:focus-within + .detail-row {
+    display: table-row;
+  }
+}
+
+/* En pantallas estrechas cada fila se comporta como una tarjeta apilada,
+   sin desplazamiento horizontal. */
+@media (max-width: 640px) {
+  thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .boss-row,
+  .detail-row td {
+    display: block;
+    width: 100%;
+  }
+
+  .boss-row {
+    border-bottom: none;
+    border-radius: 0.5rem;
+    border: 1px solid var(--color-neutral-800);
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+  }
+
+  .boss-row td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.125rem 0.25rem;
+  }
+
+  .boss-row td::before {
+    content: attr(data-label);
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-neutral-500);
+  }
+
+  .detail-row td {
+    display: block;
+    border-bottom: 1px solid var(--color-neutral-800);
+    padding: 0.25rem 0.5rem 0.5rem;
+  }
+
+  .detail-row.hidden {
+    display: none;
+  }
+
+  /* Áreas de toque cómodas para los controles de paginación. */
+  #pagination button {
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+    padding-inline: 1rem;
+  }
+
+  #pagination [data-page-range] {
+    text-align: center;
+  }
+}

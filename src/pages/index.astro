@@ -1,0 +1,51 @@
+---
+import EmptyState from "../components/EmptyState.astro";
+import Footer from "../components/Footer.astro";
+import LanguageSelector from "../components/LanguageSelector.astro";
+import SearchBox from "../components/SearchBox.astro";
+import "../styles/global.css";
+import data from "../data/raids-snapshot.json";
+import { listHtml, paginationHtml, tableHeadHtml } from "../lib/html";
+import { sortBosses } from "../lib/order";
+import { pageSlice, pageState } from "../lib/pagination";
+import { parseSnapshot } from "../lib/snapshot";
+
+const bosses = parseSnapshot(data);
+const now = new Date();
+
+// El build solo pinta la primera página: el HTML inicial lleva 20 filas, no las
+// 116. El resto se resuelve en el cliente al navegar o filtrar.
+const initialState = pageState(bosses.length, 1);
+const rows = listHtml(pageSlice(sortBosses(bosses, now, "en"), 1), now, "en");
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>How Long Without Raids</title>
+  </head>
+  <body class="min-h-screen bg-neutral-950 text-neutral-100">
+    <main class="mx-auto max-w-4xl p-4 sm:p-6">
+      <header class="mb-4 flex items-center justify-between gap-3">
+        <h1 class="text-xl font-semibold" data-i18n="title">How Long Without Raids</h1>
+        <LanguageSelector />
+      </header>
+      <SearchBox />
+      <EmptyState />
+      <div class="mt-4 overflow-x-auto">
+        <table class="w-full border-collapse">
+          <thead id="boss-head" set:html={tableHeadHtml("en")}></thead>
+          <tbody id="boss-list" set:html={rows}></tbody>
+        </table>
+      </div>
+      <div set:html={paginationHtml(initialState, "en")}></div>
+      <Footer />
+    </main>
+    <script>
+      import { start } from "../client/app";
+      start();
+    </script>
+  </body>
+</html>

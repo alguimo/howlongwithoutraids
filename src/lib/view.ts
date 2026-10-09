@@ -1,6 +1,6 @@
 import { evaluate, type StatusKind } from "./counter";
+import { displayName } from "./display";
 import { t } from "./i18n";
-import { localizeName } from "./names";
 import type { BossSnapshot, Language } from "./types";
 
 export interface RowView {
@@ -16,6 +16,8 @@ export interface DetailLine {
   label: string;
   iso: string;
   event: boolean;
+  /** Nombre del evento de esa aparición o de la ventana vigente/próxima. */
+  eventName: string | null;
 }
 
 export function rowView(boss: BossSnapshot, now: Date, lang: Language): RowView {
@@ -41,7 +43,7 @@ export function rowView(boss: BossSnapshot, now: Date, lang: Language): RowView 
         : boss.last_end_date;
 
   return {
-    name: localizeName(boss, lang),
+    name: displayName(boss, lang),
     kind: status.kind,
     days: status.days,
     upcoming: status.upcoming,
@@ -58,17 +60,27 @@ export function detailLines(
   const lines: DetailLine[] = [];
 
   if (boss.last_regular_end_date) {
-    lines.push({ label: t(lang, "last_regular"), iso: boss.last_regular_end_date, event: false });
+    lines.push({
+      label: t(lang, "last_regular"),
+      iso: boss.last_regular_end_date,
+      event: false,
+      eventName: boss.last_regular_event_name,
+    });
   }
   if (boss.last_special_event_end_date) {
-    lines.push({ label: t(lang, "last_special"), iso: boss.last_special_event_end_date, event: true });
+    lines.push({
+      label: t(lang, "last_special"),
+      iso: boss.last_special_event_end_date,
+      event: true,
+      eventName: boss.last_special_event_name,
+    });
   }
   if (boss.current_start && boss.current_end) {
     const label =
       new Date(boss.current_start).getTime() > now.getTime()
         ? t(lang, "next_window")
         : t(lang, "current_window");
-    lines.push({ label, iso: boss.current_start, event: false });
+    lines.push({ label, iso: boss.current_start, event: false, eventName: boss.current_event_name });
   }
 
   return lines;

@@ -7,6 +7,8 @@ import { pageSlice, pageState, type PageState } from "../lib/pagination";
 import { matches } from "../lib/search";
 import { parseSnapshot } from "../lib/snapshot";
 import type { Language } from "../lib/types";
+import { mountDetails } from "./detail";
+import { mountLanguageMenu } from "./language-menu";
 
 function storedLanguage(): string | null {
   try {
@@ -31,11 +33,10 @@ export function start(): void {
   const emptyEl = document.getElementById("empty");
   const searchEl = document.getElementById("search") as HTMLInputElement | null;
   const clearEl = document.getElementById("clear");
-  const selectEl = document.getElementById("language") as HTMLSelectElement | null;
 
   const pagerEl = document.getElementById("pagination");
 
-  if (!listEl || !headEl || !emptyEl || !searchEl || !clearEl || !selectEl) return;
+  if (!listEl || !headEl || !emptyEl || !searchEl || !clearEl) return;
 
   let lang: Language = resolveInitialLanguage(navigator.language, storedLanguage());
   /** Página visible. La búsqueda y el idioma la devuelven a 1; además se recorta
@@ -52,7 +53,29 @@ export function start(): void {
     });
   };
 
+  // RF-19, RF-25: el idioma ya no se elige con un `<select>` nativo, sino con
+  // el popover. Elegir persiste, vuelve a la página 1 y repinta; `render()`
+  // cierra el desplegable y vuelca el idioma resuelto al marcado.
+  const menuHandle = mountLanguageMenu({
+    onSelect: (next) => {
+      lang = next;
+      persistLanguage(lang);
+      page = 1;
+      render();
+    },
+  });
+
+  // V21: el detalle de fechas vive en su propio control (modo por `matchMedia`,
+  // nodo único movido al host flotante, `aria-expanded`). `render()` lo cierra
+  // en cada repintado; el marcado se resuelve por delegación, así que sobrevive
+  // al `innerHTML` completo de `<tbody>`.
+  const detailsHandle = mountDetails(listEl);
+
   const render = (): void => {
+    // RF-40: cualquier repintado de la lista (página, idioma o búsqueda) cierra
+    // el desplegable; su `aria-expanded` vuelve a `false`.
+    menuHandle.close();
+    detailsHandle.closeAllDetails();
     const now = new Date();
     const visible = sortBosses(bosses, now, lang).filter((boss) =>
       matches(boss, searchEl.value, lang),
@@ -67,7 +90,9 @@ export function start(): void {
     listEl.innerHTML = listHtml(pageSlice(visible, state.page), now, lang);
     headEl.innerHTML = tableHeadHtml(lang);
     emptyEl.hidden = visible.length > 0;
-    selectEl.value = lang;
+    // El servidor pinta siempre `en`; aquí la bandera del botón y las opciones
+    // pasan a reflejar el idioma resuelto (RF-27).
+    menuHandle.sync(lang);
     renderPagination(state);
     applyStaticText();
   };
@@ -98,13 +123,6 @@ export function start(): void {
     // El foco se queda en el control pulsado: el marcado no se regenera.
   };
 
-  selectEl.addEventListener("change", () => {
-    lang = selectEl.value as Language;
-    persistLanguage(lang);
-    page = 1;
-    render();
-  });
-
   searchEl.addEventListener("input", () => {
     page = 1;
     render();
@@ -125,17 +143,5 @@ export function start(): void {
     goTo(button.hasAttribute("data-page-next") ? page + 1 : page - 1);
   });
 
-  listEl.addEventListener("click", (event) => {
-    const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-detail]");
-    if (!button) return;
-    const row = button.closest("tr");
-    const panel = row?.nextElementSibling;
-    if (!panel) return;
-    const open = !panel.classList.contains("hidden");
-    panel.classList.toggle("hidden", open);
-    button.setAttribute("aria-expanded", String(!open));
-  });
-
-  selectEl.value = lang;
   render();
 }

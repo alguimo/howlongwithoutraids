@@ -1,14 +1,87 @@
 ---
+/*
+ * RF-22, RF-26: el desplegable nativo se sustituye por un botón que muestra
+ * visualmente solo la bandera del idioma activo y un indicador de apertura. Su
+ * nombre accesible es el texto «Cambiar idioma» (oculto a la vista) y anuncia si
+ * la lista está abierta con `aria-expanded`.
+ *
+ * RF-37: una sola instancia, la que monta la cabecera. El contrato que V19
+ * (teclado) y V20 (cableado) necesitan está escrito aquí: la raíz del
+ * componente, botón `#language` con `aria-controls="language-menu"`, lista
+ * `#language-menu` con `role="listbox"` y una `[role="option"][data-lang]` por idioma.
+ *
+ * RF-23, RF-26: la lista muestra las tres banderas (SVG en línea vía `flagSvg`,
+ * decorativas) con su nombre en su propio idioma y marca la activa con
+ * `aria-selected` y un fondo distinto. Nunca emojis, nunca `<img>`.
+ */
+import { FLAG_LANG, flagSvg } from "../lib/flags";
+import { t } from "../lib/i18n";
+import type { Language } from "../lib/types";
+
+interface Props {
+  /** Idioma activo. El build pinta el de por defecto (`en`); el cliente lo
+   *  actualiza al resolverlo (RF-27, V20). */
+  lang?: Language;
+}
+
+const { lang = "en" } = Astro.props;
+
+/** El nombre de cada idioma se escribe en su propio idioma (RF-23). */
+const NAME_KEY: Record<Language, string> = {
+  es: "lang_name_es",
+  en: "lang_name_en",
+  fr: "lang_name_fr",
+};
 ---
 
-<div class="flex items-center gap-2">
-  <label class="sr-only" for="language" data-i18n="language_label">Language</label>
-  <select
+<div class="relative" data-language-selector>
+  <button
     id="language"
-    class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-neutral-100 outline-none focus:border-neutral-500"
+    type="button"
+    class="flex items-center gap-1.5 rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-neutral-100 outline-none focus:border-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-400"
+    aria-haspopup="listbox"
+    aria-expanded="false"
+    aria-controls="language-menu"
   >
-    <option value="es">Español</option>
-    <option value="en">English</option>
-    <option value="fr">Français</option>
-  </select>
+    <span class="sr-only" data-i18n="change_language">{t(lang, "change_language")}</span>
+    <span data-language-flag set:html={flagSvg(lang)}></span>
+    <svg
+      viewBox="0 0 16 16"
+      width="12"
+      height="12"
+      aria-hidden="true"
+      focusable="false"
+      class="text-neutral-400"
+    >
+      <path
+        d="M4 6l4 4 4-4"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"></path>
+    </svg>
+  </button>
+  <ul
+    id="language-menu"
+    role="listbox"
+    aria-labelledby="language"
+    hidden
+    class="absolute right-0 z-30 mt-2 min-w-36 rounded-md border border-neutral-700 bg-neutral-900 p-1 shadow-lg"
+  >
+    {
+      FLAG_LANG.map((code) => (
+        <li
+          role="option"
+          data-lang={code}
+          tabindex="-1"
+          aria-selected={code === lang ? "true" : "false"}
+          class="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-neutral-300 outline-none hover:bg-neutral-800 focus:bg-neutral-800 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-neutral-400 aria-selected:bg-neutral-800 aria-selected:text-neutral-100"
+        >
+          <span data-option-flag set:html={flagSvg(code)}></span>
+          <span data-i18n={NAME_KEY[code]}>{t(lang, NAME_KEY[code])}</span>
+        </li>
+      ))
+    }
+  </ul>
 </div>

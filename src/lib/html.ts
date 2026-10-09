@@ -1,3 +1,4 @@
+import { baseName } from "./display";
 import { t } from "./i18n";
 import type { PageState } from "./pagination";
 import type { BossSnapshot, Language } from "./types";
@@ -24,17 +25,29 @@ export function formatDate(iso: string, lang: Language): string {
   );
 }
 
+/** Id del nodo único de detalle de un jefe (RF-39). El botón de fecha apunta
+ *  siempre a este id, en las dos modalidades del detalle. */
+export function detailRowId(key: string): string {
+  return `detail-${key}`;
+}
+
+// RF-21: `neutral-500` sobre `bg-neutral-950` daba 4.18:1 y no llegaba al 4.5:1
+// que pide la spec. `neutral-400` se queda en 7.63:1 sin_volverse a competir con
+// el texto de las celdas (`neutral-100`): el encabezado sigue siendo el tono bajo
+// de la tabla porque además es `text-xs` y va en mayúsculas.
+const HEAD_CELL =
+  'scope="col" role="columnheader" class="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-neutral-400"';
+
 export function tableHeadHtml(lang: Language = "en"): string {
-  const cells = [
-    t(lang, "col_image"),
-    t(lang, "col_name"),
-    t(lang, "col_status"),
-    t(lang, "col_date"),
-    t(lang, "col_tier"),
-  ];
-  return `<tr>${cells
-    .map((label) => `<th scope="col" class="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-neutral-500">${escapeHtml(label)}</th>`)
-    .join("")}</tr>`;
+  // El encabezado del sprite se oculta por dentro (RF-18, D3): el `<th>`
+  // conserva su caja y su rol, y el texto vive en un `sr-only`. Si el
+  // `sr-only` se pusiera en la celda, perdería el ancho y la tabla
+  // redistribuiría las columnas en cada corte.
+  const spriteHeader = `<th ${HEAD_CELL}><span class="sr-only">${escapeHtml(t(lang, "col_image"))}</span></th>`;
+  const visible: string[] = (["col_name", "col_status", "col_date", "col_tier"] as const).map(
+    (key) => `<th ${HEAD_CELL}>${escapeHtml(t(lang, key))}</th>`,
+  );
+  return `<tr role="row">${spriteHeader}${visible.join("")}</tr>`;
 }
 
 function detailHtml(boss: BossSnapshot, now: Date, lang: Language): string {
@@ -42,10 +55,15 @@ function detailHtml(boss: BossSnapshot, now: Date, lang: Language): string {
   if (lines.length === 0) return "";
   const body = lines
     .map((line) => {
+      // RF-17, RF-19: el nombre del evento se pinta junto a la etiqueta, solo
+      // cuando existe, y siempre escapado (texto de una fuente externa).
+      const eventName = line.eventName
+        ? ` <span class="text-neutral-300">${escapeHtml(line.eventName)}</span>`
+        : "";
       const eventTag = line.event
         ? ` <span class="rounded bg-neutral-800 px-2 py-0.5 text-xs">${escapeHtml(t(lang, "event_tag"))}</span>`
         : "";
-      return `<div class="flex items-center justify-between gap-3 py-0.5 text-sm text-neutral-400"><span>${escapeHtml(line.label)}${eventTag}</span><span>${escapeHtml(formatDate(line.iso, lang))}</span></div>`;
+      return `<div class="flex items-center justify-between gap-3 py-0.5 text-sm text-neutral-400"><span>${escapeHtml(line.label)}${eventName}${eventTag}</span><span>${escapeHtml(formatDate(line.iso, lang))}</span></div>`;
     })
     .join("");
   return `<div class="flex flex-wrap gap-x-8">${body}</div>`;
@@ -54,11 +72,12 @@ function detailHtml(boss: BossSnapshot, now: Date, lang: Language): string {
 export function rowHtml(boss: BossSnapshot, now: Date, lang: Language): string {
   const view = rowView(boss, now, lang);
   const key = `${boss.dex_number}-${boss.form}-${boss.variant}`.toLowerCase();
+  const detailId = detailRowId(key);
   const dateLabel = view.dateISO ? formatDate(view.dateISO, lang) : "";
 
   const avatar = boss.sprite_url
     ? `<img src="${escapeHtml(boss.sprite_url)}" alt="${escapeHtml(view.name)}" width="40" height="40" loading="lazy" class="h-10 w-10 rounded object-contain" />`
-    : `<span role="img" aria-label="${escapeHtml(view.name)}" class="flex h-10 w-10 items-center justify-center rounded bg-neutral-800 text-xs font-semibold text-neutral-300">${escapeHtml(initials(view.name))}</span>`;
+    : `<span role="img" aria-label="${escapeHtml(view.name)}" class="flex h-10 w-10 items-center justify-center rounded bg-neutral-800 text-xs font-semibold text-neutral-300">${escapeHtml(initials(baseName(boss, lang)))}</span>`;
 
   const upcomingTag =
     view.upcoming && view.kind !== "upcoming"
@@ -69,16 +88,28 @@ export function rowHtml(boss: BossSnapshot, now: Date, lang: Language): string {
     ? `<span class="rounded bg-neutral-900 px-2 py-0.5 text-xs text-neutral-300">${escapeHtml(boss.tier)}</span>`
     : "";
 
-  return `<tr class="boss-row border-b border-neutral-900 align-middle">
-  <td class="px-3 py-2" data-label="${escapeHtml(t(lang, "col_image"))}">${avatar}</td>
-  <td class="px-3 py-2 font-medium" data-label="${escapeHtml(t(lang, "col_name"))}">${escapeHtml(view.name)}</td>
-  <td class="px-3 py-2 text-sm text-neutral-300" data-label="${escapeHtml(t(lang, "col_status"))}"><span class="flex items-center gap-2">${escapeHtml(view.statusText)}${upcomingTag}</span></td>
-  <td class="px-3 py-2 text-sm" data-label="${escapeHtml(t(lang, "col_date"))}">
-    <button type="button" data-detail aria-expanded="false" aria-controls="detail-${key}" class="text-neutral-300 underline underline-offset-4 outline-none focus-visible:ring-1 focus-visible:ring-neutral-400">${escapeHtml(dateLabel)}</button>
+  // RF-11, RF-43: cinco celdas en el orden sprite · Pokémon · Última aparición ·
+  // Fecha · Tier. Los roles van escritos porque el apilado a tarjetas de la
+  // ventana estrecha cambia el `display` y el navegador recalcularía el rol
+  // implícito a `generic`, dejando al lector de pantalla sin celdas.
+  //
+  // RF-39: el `<tr class="detail-row">` es el nodo único de detalle y el `<td>`
+  // lleva `role="cell"` explícito. En ventana estrecha el CSS lo pasa a
+  // `display: block` y, sin el rol escrito, el detalle desplegado quedaría como
+  // texto suelto y no como celda navegable (deuda de V13/V14). Cuando V21 mueva
+  // este nodo al host flotante sustituirá los roles de fila y celda por
+  // `role="tooltip"`, para no dejar una celda dentro de un nodo que ya no es una
+  // fila de tabla.
+  return `<tr class="boss-row border-b border-neutral-900 align-middle" role="row">
+  <td role="cell" class="px-3 py-2" data-label="${escapeHtml(t(lang, "col_image"))}">${avatar}</td>
+  <td role="cell" class="px-3 py-2 font-medium" data-label="${escapeHtml(t(lang, "col_name"))}">${escapeHtml(view.name)}</td>
+  <td role="cell" class="px-3 py-2 text-sm text-neutral-300" data-label="${escapeHtml(t(lang, "col_status"))}"><span class="flex items-center gap-2">${escapeHtml(view.statusText)}${upcomingTag}</span></td>
+  <td role="cell" class="px-3 py-2 text-sm" data-label="${escapeHtml(t(lang, "col_date"))}">
+    <button type="button" data-detail aria-expanded="false" aria-controls="${detailId}" class="text-neutral-300 underline underline-offset-4 outline-none focus-visible:ring-1 focus-visible:ring-neutral-400">${escapeHtml(dateLabel)}</button>
   </td>
-  <td class="px-3 py-2 text-xs" data-label="${escapeHtml(t(lang, "col_tier"))}">${tierCell}</td>
+  <td role="cell" class="px-3 py-2 text-xs" data-label="${escapeHtml(t(lang, "col_tier"))}">${tierCell}</td>
 </tr>
-<tr id="detail-${key}" class="detail-row hidden"><td colspan="5" class="px-3 pb-3 pt-0">${detailHtml(boss, now, lang)}</td></tr>`;
+<tr id="${detailId}" class="detail-row hidden" role="row"><td role="cell" colspan="5" class="px-3 pb-3 pt-0">${detailHtml(boss, now, lang)}</td></tr>`;
 }
 
 export function listHtml(
@@ -90,7 +121,7 @@ export function listHtml(
 }
 
 const PAGER_BUTTON =
-  "inline-flex h-10 min-w-10 items-center justify-center gap-1 rounded-md border border-neutral-700 px-3 text-sm text-neutral-200 outline-none transition-colors hover:border-neutral-500 focus-visible:border-neutral-400 focus-visible:ring-1 focus-visible:ring-neutral-300 disabled:cursor-not-allowed disabled:border-neutral-800 disabled:text-neutral-600 disabled:hover:border-neutral-800";
+  "inline-flex h-10 min-w-10 items-center justify-center gap-1 rounded-md border border-neutral-700 px-3 text-sm text-neutral-200 outline-none transition-colors hover:border-neutral-500 focus-visible:border-neutral-400 focus-visible:ring-1 focus-visible:ring-neutral-300 disabled:cursor-not-allowed disabled:border-neutral-800 disabled:text-neutral-400 disabled:hover:border-neutral-800";
 
 export interface PaginationView {
   /** Texto accesible del contenedor de navegación. */

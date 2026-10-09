@@ -6,6 +6,7 @@
 
 import argparse
 import os
+from datetime import datetime, timezone
 
 import httpx
 import psycopg
@@ -13,7 +14,11 @@ import psycopg
 from raids.identity import UnmappableIdentity
 from raids.log import log_omitted, log_source_failure
 from raids.pokedex import Catalog, identity_from_boss
-from raids.sources.scrapedduck import mark_windows, parse_events, parse_raids
+from raids.sources.scrapedduck import (
+    mark_windows,
+    parse_events,
+    parse_raids,
+)
 from raids.store import AppearanceRecord, store_records, upsert_pokemon
 
 DEFAULT_DSN = os.environ.get("RAIDS_DSN", "postgresql://raids:raids@localhost:5433/raids")
@@ -26,7 +31,7 @@ def _tier_by_name(roster) -> dict[str, str]:
     return {entry.name.strip().lower(): entry.tier for entry in roster if entry.tier}
 
 
-def run(conn, fetch_roster, fetch_events, *, logger=None) -> dict:
+def run(conn, fetch_roster, fetch_events, *, now=None, logger=None) -> dict:
     roster = []
     try:
         roster = parse_raids(fetch_roster())
@@ -54,7 +59,7 @@ def run(conn, fetch_roster, fetch_events, *, logger=None) -> dict:
     catalog = Catalog.from_conn(conn)
 
     try:
-        parsed = parse_events(fetch_events())
+        parsed = parse_events(fetch_events(), now=now)
     except Exception as exc:
         log_source_failure(f"events.json: {exc}", logger=logger)
         return {"written": 0}
@@ -67,7 +72,9 @@ def run(conn, fetch_roster, fetch_events, *, logger=None) -> dict:
             continue
         tier = tiers.get(appearance.boss_name.strip().lower())
         if tier is None:
-            log_omitted("no tier for boss", logger=logger, name=appearance.boss_name)
+            log_omitted(
+                "no valid roster tier for boss", logger=logger, name=appearance.boss_name
+            )
             continue
         records.append(
             AppearanceRecord(
@@ -80,6 +87,7 @@ def run(conn, fetch_roster, fetch_events, *, logger=None) -> dict:
                 end=appearance.end,
                 source="scrapedduck",
                 is_special_event=appearance.is_special_event,
+                event_name=appearance.event_name,
             )
         )
 
@@ -95,7 +103,12 @@ def main(argv=None) -> int:
         return lambda: httpx.get(url, headers={"User-Agent": USER_AGENT}, timeout=30).json()
 
     with psycopg.connect(args.dsn, autocommit=True) as conn:
-        result = run(conn, fetch(ROSTER_URL), fetch(EVENTS_URL))
+        result = run(
+            conn,
+            fetch(ROSTER_URL),
+            fetch(EVENTS_URL),
+            now=datetime.now(timezone.utc),
+        )
     print(f"appearances: {result['written']}")
     return 0
 

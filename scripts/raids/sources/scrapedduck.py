@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Any, Iterable
 
 from raids.intervals import Window, is_short_event, overlaps
+from raids.log import log_omitted
 from raids.time import to_utc
 
 RAID_BATTLES = "raid-battles"
@@ -24,7 +25,6 @@ TIER_LABELS = {
     "primal raids": "PRIMAL",
     "elite raids": "ELITE",
 }
-
 
 class InvalidSourcePayload(ValueError):
     """El cuerpo de la fuente no tiene la forma esperada."""
@@ -44,6 +44,7 @@ class BossWindow:
     boss_name: str
     start: datetime
     end: datetime
+    event_name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -67,6 +68,120 @@ class BossAppearance:
     start: datetime
     end: datetime
     is_special_event: bool
+    event_name: str | None = None
+    event_id: str = ""
+
+
+def normalize_raid_windows(payload: Any, now: datetime) -> ParsedEvents:
+    """Normalize complete raid windows without inventing an open-ended end.
+
+    This is deliberately limited to the source-level window rules. Roster
+    resolution and persistence remain in the weekly sync pipeline.
+    """
+    now = to_utc(now)
+    events = _as_list(payload)
+    known_starts = []
+    for event in events:
+        if not isinstance(event, dict) or event.get("eventType") != RAID_BATTLES:
+            continue
+        if event.get("start") is not None:
+            try:
+                known_starts.append(to_utc(event["start"]))
+            except (TypeError, ValueError):
+                continue
+    known_starts.sort()
+
+    windows: list[BossWindow] = []
+    short_events: list[ShortEvent] = []
+    for event in events:
+        if not isinstance(event, dict):
+            raise InvalidSourcePayload("event is not an object")
+        kind = event.get("eventType")
+        event_id = str(event.get("eventID", ""))
+        start_value = event.get("start")
+        end_value = event.get("end")
+
+        if kind == RAID_BATTLES:
+            if start_value is None:
+                log_omitted("missing start", event_id=event_id)
+                continue
+            try:
+                start = to_utc(start_value)
+            except (TypeError, ValueError):
+                log_omitted("invalid start", event_id=event_id)
+                continue
+
+            if end_value is None:
+                later_starts = [candidate for candidate in known_starts if candidate > start]
+                end = derive_past_end(start, later_starts, now)
+                if end is None:
+                    log_omitted("missing end", event_id=event_id)
+                    continue
+            else:
+                try:
+                    end = to_utc(end_value)
+                except (TypeError, ValueError):
+                    log_omitted("invalid end", event_id=event_id)
+                    continue
+
+            if start >= end:
+                log_omitted("invalid window", event_id=event_id)
+                continue
+            event_name = _clean_event_name(event.get("name"))
+            for boss_name in _event_bosses(event):
+                windows.append(
+                    BossWindow(event_id, boss_name, start, end, event_name)
+                )
+        elif kind and is_short_event(kind):
+            if start_value is None:
+                log_omitted("missing start", event_id=event_id)
+                continue
+            if end_value is None:
+                log_omitted("missing end", event_id=event_id)
+                continue
+            try:
+                start = to_utc(start_value)
+                end = to_utc(end_value)
+            except (TypeError, ValueError):
+                log_omitted("invalid window", event_id=event_id)
+                continue
+            if start >= end:
+                log_omitted("invalid window", event_id=event_id)
+                continue
+            short_events.append(
+                ShortEvent(
+                    event_id,
+                    str(kind),
+                    str(event.get("name", "")),
+                    start,
+                    end,
+                )
+            )
+    return ParsedEvents(tuple(windows), tuple(short_events))
+
+
+def derive_past_end(
+    start: datetime,
+    later_rotation_starts: Iterable[datetime],
+    now: datetime,
+) -> datetime | None:
+    """Return the first later rotation start only for a closed past window.
+
+    A later start that is still in the future does not prove that the current
+    rotation ended, so open current and future rotations deliberately return
+    ``None``.  The caller logs the omission because this pure helper has no
+    logging side effect.
+    """
+    start = to_utc(start)
+    now = to_utc(now)
+    if start >= now:
+        return None
+    candidates = tuple(
+        candidate
+        for candidate in (to_utc(value) for value in later_rotation_starts)
+        if start < candidate <= now
+    )
+    return min(candidates, default=None)
 
 
 def _as_list(payload: Any) -> list:
@@ -104,6 +219,13 @@ def parse_raids(payload: Any) -> list[RosterEntry]:
     return roster
 
 
+def _clean_event_name(value: Any) -> str | None:
+    if value is None:
+        return None
+    cleaned = str(value).strip()
+    return cleaned or None
+
+
 def _event_bosses(event: dict) -> list[str]:
     extra = event.get("extraData") or {}
     raidbattles = extra.get("raidbattles") or {}
@@ -115,7 +237,14 @@ def _event_bosses(event: dict) -> list[str]:
     ]
 
 
-def parse_events(payload: Any) -> ParsedEvents:
+def parse_events(payload: Any, *, now: datetime | None = None) -> ParsedEvents:
+    """Parse events, optionally applying explicit open-window normalization.
+
+    The no-``now`` form remains for callers that only parse already complete
+    fixtures. State-dependent normalization must provide ``now`` explicitly.
+    """
+    if now is not None:
+        return normalize_raid_windows(payload, now)
     windows: list[BossWindow] = []
     short_events: list[ShortEvent] = []
     for event in _as_list(payload):
@@ -128,6 +257,7 @@ def parse_events(payload: Any) -> ParsedEvents:
         if kind == RAID_BATTLES:
             if start is None or end is None:
                 continue
+            event_name = _clean_event_name(event.get("name"))
             for boss_name in _event_bosses(event):
                 windows.append(
                     BossWindow(
@@ -135,6 +265,7 @@ def parse_events(payload: Any) -> ParsedEvents:
                         boss_name=boss_name,
                         start=to_utc(start),
                         end=to_utc(end),
+                        event_name=event_name,
                     )
                 )
         elif kind and is_short_event(kind):
@@ -160,20 +291,49 @@ def short_event_boss(event: ShortEvent) -> str:
     return name
 
 
-def mark_windows(
-    windows: Iterable[BossWindow], short_events: Iterable[ShortEvent]
-) -> list[BossAppearance]:
-    shorts = list(short_events)
-    appearances = []
-    for window in windows:
-        is_special = any(
-            short_event_boss(event).lower() == window.boss_name.lower()
+def _matching_short_event(
+    window: BossWindow, shorts: list[ShortEvent]
+) -> ShortEvent | None:
+    return next(
+        (
+            event
+            for event in shorts
+            if short_event_boss(event).lower() == window.boss_name.lower()
             and overlaps(
                 Window(window.start, window.end), Window(event.start, event.end)
             )
-            for event in shorts
+        ),
+        None,
+    )
+
+
+def mark_windows(
+    windows: Iterable[BossWindow], short_events: Iterable[ShortEvent]
+) -> list[BossAppearance]:
+    """Mark a rotation as a short event and carry the right event name.
+
+    RF-16 restricts ``last_special_event_end_date`` to Raid Hour/Day, and RF-43
+    names the appearance that fixes that date. The model keeps one ``event_name``
+    per appearance, so a window marked as special stores the short event's
+    ``name`` (Raid Hour/Day); a regular window keeps the ``raid-battles`` event
+    name. Choosing the rotation name for a special window would mislabel the
+    special date.
+    """
+    shorts = list(short_events)
+    appearances = []
+    for window in windows:
+        matched = _matching_short_event(window, shorts)
+        event_name = (
+            _clean_event_name(matched.name) if matched else window.event_name
         )
         appearances.append(
-            BossAppearance(window.boss_name, window.start, window.end, is_special)
+            BossAppearance(
+                window.boss_name,
+                window.start,
+                window.end,
+                matched is not None,
+                event_name=event_name,
+                event_id=window.event_id,
+            )
         )
     return appearances

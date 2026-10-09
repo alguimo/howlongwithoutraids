@@ -27,12 +27,20 @@ const rows = listHtml(pageSlice(sortBosses(bosses, now, "en"), 1), now, "en");
     <title>How Long Without Raids</title>
   </head>
   <body class="min-h-screen bg-neutral-950 text-neutral-100">
+    <!-- RF-29, RF-42: la cabecera es una sola instancia y vive como hermana
+         anterior de <main>, fuera del contenedor con desplazamiento de la
+         tabla. Cualquier ancestro con `overflow` distinto de `visible`,
+         `transform`, `filter` o `contain` anularía el pegado en silencio. -->
+    <header class="app-header">
+      <div class="mx-auto max-w-4xl p-4 sm:p-6">
+        <div class="flex items-center justify-between gap-3">
+          <h1 class="text-4xl font-semibold" data-i18n="title">How Long Without Raids</h1>
+          <LanguageSelector />
+        </div>
+        <SearchBox />
+      </div>
+    </header>
     <main class="mx-auto max-w-4xl p-4 sm:p-6">
-      <header class="mb-4 flex items-center justify-between gap-3">
-        <h1 class="text-xl font-semibold" data-i18n="title">How Long Without Raids</h1>
-        <LanguageSelector />
-      </header>
-      <SearchBox />
       <EmptyState />
       <div class="mt-4 overflow-x-auto">
         <table class="w-full border-collapse">

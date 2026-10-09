@@ -1,19 +1,119 @@
 @import "tailwindcss";
 
+/* Estado cerrado del detalle. La clase `hidden` lo esconde en los dos entornos
+   y sin ninguna media query a propósito: el nodo solo se muestra cuando el
+   cliente se la quita, y ese cliente es quien decide el modo (RF-41). */
 .detail-row.hidden {
   display: none;
 }
 
-@media (hover: hover) {
-  .boss-row:hover + .detail-row,
-  .boss-row:focus-within + .detail-row {
+/* RF-33, RF-35: la fila desplegable es la representación del detalle SOLO en
+   `(hover: none)`. Aquí ya no hay ninguna regla `.boss-row:hover + .detail-row`
+   ni `.boss-row:focus-within + .detail-row`: abrir el detalle al rozar el
+   nombre, la sequía o el tier hace saltar el contenido bajo el cursor y choca
+   con el tooltip de la celda de fecha (RF-31), que desde V16 es el único
+   disparador en `(hover: hover)`. */
+@media (hover: none) {
+  /* Se declara aunque sea el `display` inicial de un `<tr>`, para que quede
+     escrito que esta es la única caja en la que la fila existe. La clase
+     `hidden` (dos clases, 0,2,0) gana a esta regla (una clase, 0,1,0) y la
+     sigue escondiendo hasta que un toque la quite. */
+  .detail-row {
     display: table-row;
   }
 }
 
-/* En pantallas estrechas cada fila se comporta como una tarjeta apilada,
-   sin desplazamiento horizontal. */
-@media (max-width: 640px) {
+/* RF-35, RF-41: en un entorno con puntero la fila desplegable no es un estado
+   que el JS evita, es un estado que el CSS ni siquiera deja pintar. Así el clic
+   y `Enter`/`Espacio` sobre la fecha no pueden abrirla por la vía del estilo
+   (V21 apaga además esos disparadores en el JS; esta es la red de seguridad).
+
+   El veto va anclado al `tbody` a propósito: el nodo único es la misma fila, y
+   cuando V16/V21 la cuelguen del host flotante seguirá llevando `.detail-row`
+   pero ya no será hija de `tbody`, así que este veto no puede apagar el tooltip
+   que la spec manda en `(hover: hover)`. Un `display: none` sobre `.detail-row`
+   a secas lo apagaría, y por eso no está. */
+@media (hover: hover) {
+  tbody .detail-row {
+    display: none;
+  }
+}
+
+/* RF-32: el panel flotante no captura el puntero. Se limita a la representación
+   flotante —cuando V21 ponga `role="tooltip"`—, no a la fila desplegada en
+   táctil, donde tocar dentro del detalle no debe atravesarlo. Un tooltip que
+   roba el hover se cierra solo al mover el puntero hacia él y estorba justo
+   cuando se está leyendo (RF-32). */
+.detail-row[role="tooltip"] {
+  pointer-events: none;
+}
+
+/* V21, RF-39, R2: host flotante del nodo único de detalle. Lo crea `detail.ts`
+   al montar; no vive en `index.astro` para no meter un div vacío en el marcado.
+   Es `fixed` en el origen de la ventana para que las coordenadas de
+   `placeTooltip` (píxeles de viewport) se apliquen tal cual, y no captura el
+   puntero porque el tooltip tampoco lo hace (RF-32). */
+#detail-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+
+/* Un `<tr>` fuera de `<tbody>` deja de ser una fila de tabla y no se pinta si
+   nadie le da una caja. El host se la devuelve explícita a la fila y a su celda:
+   ahí el detalle es un panel, no una fila. El veto de `(hover: hover)` de V15
+   está anclado a `tbody`, así que no alcanza a este nodo. */
+#detail-layer .detail-row {
+  position: absolute;
+  display: block;
+  width: max-content;
+  max-width: min(20rem, calc(100vw - 1rem));
+  background-color: var(--color-neutral-900);
+  border: 1px solid var(--color-neutral-800);
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 25px rgb(0 0 0 / 0.5);
+}
+
+#detail-layer .detail-row > td {
+  display: block;
+  padding: 0.5rem 0.75rem;
+}
+
+/* RF-29, RF-30, RF-42: barra de la cabecera. Una sola instancia, montada como
+   hermana anterior de <main>. El tono es propio y opaco (neutral-900 sobre el
+   neutral-950 de la página) con borde inferior, para que al hacer scroll la
+   primera fila no se lea a través de ella. */
+.app-header {
+  background-color: var(--color-neutral-900);
+  border-bottom: 1px solid var(--color-neutral-800);
+}
+
+/* RF-29: pegado solo en ventana ancha (≥768 px, el único corte de layout de la
+   spec). En estrecho la cabecera fluye con el documento y no roba altura útil
+   a la tabla. Es el único `sticky` de la página (RF-42): no hay anidamientos
+   ni ancestros con scroll que lo anulen. */
+@media (min-width: 768px) {
+  .app-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+}
+
+/* En ventana estrecha (≤767 px) cada fila se comporta como una tarjeta apilada,
+   sin desplazamiento horizontal.
+
+   Este es el ÚNICO corte de layout de la spec («Definiciones»): estrecho es
+   767 px o menos y ancho es 768 px o más. Cualquier otro número de anchura
+   (el 640 px que hubo aquí antes) deja dos cortes contradictorios en el mismo
+   fichero. Ojo: el modo del detalle NO se decide aquí, lo decide
+   `(hover: hover)` / `(hover: none)` (RF-41), así que aquí no aparece `hover`. */
+@media (max-width: 767px) {
+  /* RF-18: los encabezados no se ven pero se conservan. El recorte es
+     absolutos + clip, nunca `display: none` ni `visibility: hidden`, porque
+     esos dos últimos sacan el nodo del árbol de accesibilidad y el lector de
+     pantalla pierde la fila de encabezado (RF-43). */
   thead {
     position: absolute;
     width: 1px;
@@ -23,34 +123,59 @@
     white-space: nowrap;
   }
 
-  .boss-row,
-  .detail-row td {
-    display: block;
-    width: 100%;
-  }
-
+  /* La fila se apila como tarjeta. `flex-wrap` permite que el sprite y el
+     nombre quepan en la primera línea y que el resto de celdas baje a la
+     siguiente, sin partir la fila en dos cajas (RF-15). Los roles del marcado
+     (V13) son los que sostienen la semántica de tabla: aquí solo cambia el
+     `display`, nunca el rol. */
   .boss-row {
-    border-bottom: none;
-    border-radius: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    /* El `border-b` de las clases del marcado no aplica aquí: este fichero va
+       sin capa de Tailwind, así que el atajo `border` gana y la tarjeta queda
+       con su borde completo, como antes. */
     border: 1px solid var(--color-neutral-800);
+    border-radius: 0.5rem;
     margin-bottom: 0.5rem;
     padding: 0.5rem;
   }
 
-  .boss-row td {
+  .boss-row > td {
     display: flex;
+    flex: 1 1 100%;
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
     padding: 0.125rem 0.25rem;
   }
 
-  .boss-row td::before {
+  /* La celda del sprite no lleva etiqueta: una etiqueta «Imagen» delante de un
+     sprite es ruido y el nombre del jefe ya está al lado (RF-15). `flex: 0 0
+     auto` la deja en su tamaño natural en lugar de estirarla a toda la línea. */
+  .boss-row > td:first-child {
+    flex: 0 0 auto;
+    padding-inline: 0;
+  }
+
+  /* La celda del nombre se queda en la primera línea, junto al sprite, y su
+     etiqueta queda a la izquierda en lugar de flotar al extremo opuesto. */
+  .boss-row > td:nth-child(2) {
+    flex: 1 1 auto;
+    justify-content: flex-start;
+  }
+
+  /* Etiqueta de columna del resto de celdas: sale de `data-label`, que
+     `html.ts` ya escribe traducido. */
+  .boss-row > td:not(:first-child)::before {
     content: attr(data-label);
     font-size: 0.6875rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--color-neutral-500);
+    /* RF-21: `neutral-500` sobre el `bg-neutral-950` de la página daba 4.18:1.
+       `neutral-400` sube a 7.63:1 sin romper la jerarquía: la etiqueta es más
+       apagada que el valor porque es `0.6875rem` en mayúsculas. */
+    color: var(--color-neutral-400);
   }
 
   .detail-row td {
@@ -59,9 +184,9 @@
     padding: 0.25rem 0.5rem 0.5rem;
   }
 
-  .detail-row.hidden {
-    display: none;
-  }
+  /* Ni aquí una copia de `.detail-row.hidden { display: none }`: esa regla es
+     global y ya esconde la fila en ventana estrecha. Repetirla convertía un
+     duplicado sin valor en algo que el test tenía que defender. */
 
   /* Áreas de toque cómodas para los controles de paginación. */
   #pagination button {

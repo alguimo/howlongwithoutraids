@@ -27,6 +27,10 @@ def run(conn, fetch_catalog) -> int:
             name=entry.name,
             types=entry.types,
             sprite_url=entry.sprite_url,
+            is_legendary=entry.is_legendary,
+            is_mythical=entry.is_mythical,
+            is_baby=entry.is_baby,
+            update_categories=True,
         )
     return len(entries)
 

@@ -84,8 +84,12 @@ export function rowHtml(boss: BossSnapshot, now: Date, lang: Language): string {
       ? `<span class="rounded bg-neutral-800 px-2 py-0.5 text-xs text-neutral-300">${escapeHtml(t(lang, "upcoming"))}</span>`
       : "";
 
-  const tierCell = boss.tier
-    ? `<span class="rounded bg-neutral-900 px-2 py-0.5 text-xs text-neutral-300">${escapeHtml(boss.tier)}</span>`
+  // 003 RF-14: tier vigente/próximo y, si no lo hay, el último histórico
+  // (`last_tier`). Un jefe terminado con tier conocido no se muestra vacío; solo
+  // queda la celda sin badge cuando el snapshot no trae ninguno de los dos.
+  const tier = boss.tier ?? boss.last_tier;
+  const tierCell = tier
+    ? `<span class="rounded bg-neutral-900 px-2 py-0.5 text-xs text-neutral-300">${escapeHtml(tier)}</span>`
     : "";
 
   // RF-11, RF-43: cinco celdas en el orden sprite · Pokémon · Última aparición ·

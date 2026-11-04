@@ -1,4 +1,4 @@
-import { SNAPSHOT_FIELDS, type BossSnapshot } from "./types";
+import { SNAPSHOT_FIELDS, type BossSnapshot, type SnapshotMeta } from "./types";
 
 export { SNAPSHOT_FIELDS } from "./types";
 
@@ -73,4 +73,27 @@ export function parseSnapshot(value: unknown): BossSnapshot[] {
     throw new SnapshotError("snapshot must be an array");
   }
   return value.map((row, index) => validateRow(row, index));
+}
+
+export function parseSnapshotMeta(value: unknown): SnapshotMeta {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new SnapshotError("snapshot metadata must be an object");
+  }
+  const record = value as Record<string, unknown>;
+  const keys = Object.keys(record);
+  if (keys.length !== 1 || !("exported_at" in record)) {
+    throw new SnapshotError("snapshot metadata must only contain exported_at");
+  }
+  const exportedAt = record.exported_at;
+  if (exportedAt === null) {
+    return { exported_at: null };
+  }
+  if (typeof exportedAt !== "string") {
+    throw new SnapshotError("snapshot metadata exported_at must be a string or null");
+  }
+  const trimmed = exportedAt.trim();
+  if (trimmed.length === 0 || !trimmed.endsWith("Z") || Number.isNaN(Date.parse(trimmed))) {
+    throw new SnapshotError("snapshot metadata exported_at must be a valid UTC ISO string");
+  }
+  return { exported_at: exportedAt };
 }

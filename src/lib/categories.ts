@@ -1,9 +1,9 @@
+import { isActive } from "./counter";
+import type { BossSnapshot } from "./types";
+
 /**
- * Categorías del buscador (spec 004, RF-11…RF-13, RNF-04).
- *
- * Módulo puro, sin DOM ni red. El buscador (T5) combina estas categorías con la
- * búsqueda por nombre/dex: `matchCategory` traduce un texto a una categoría y
- * `matchesCategory` evalúa el predicado sobre un jefe.
+ * Categorías del buscador y píldoras de filtro rápido (spec 004 RF-11…RF-13,
+ * ampliado por spec 006 RF-04…RF-05).
  */
 export type CategoryId =
   | "mega"
@@ -14,11 +14,23 @@ export type CategoryId =
   | "primal"
   | "baby";
 
-/**
- * Campos mínimos que necesita un jefe para evaluar categorías. `BossSnapshot`
- * es asignable a este tipo; se declara aparte para no acoplar el módulo a los
- * campos booleanos que `types.ts` aún no declara (nota de implementación 004).
- */
+export const FILTER_CHIPS = [
+  "active",
+  "legendary",
+  "mega",
+  "shadow",
+  "ultra_beast",
+  "mythical",
+] as const;
+
+export type FilterChipId = (typeof FILTER_CHIPS)[number];
+
+const FILTER_CHIP_SET: ReadonlySet<string> = new Set(FILTER_CHIPS);
+
+export function isFilterChipId(value: unknown): value is FilterChipId {
+  return typeof value === "string" && FILTER_CHIP_SET.has(value);
+}
+
 export interface CategorySubject {
   variant: string;
   is_legendary?: boolean | null;
@@ -27,18 +39,39 @@ export interface CategorySubject {
   is_ultra_beast?: boolean | null;
 }
 
-/** Alias válidos en cualquier idioma activo (RF-11). */
+/** Alias singulares y plurales válidos en cualquier idioma activo (004 RF-11, 006 RF-05). */
 export const CATEGORY_ALIASES: Record<CategoryId, readonly string[]> = {
-  mega: ["mega", "méga"],
-  legendary: ["legendario", "legendary", "légendaire"],
-  mythical: ["mítico", "mythical", "mythique", "fabuleux"],
-  ultra_beast: ["ultraente", "ultra beast", "ultra-chimère"],
-  shadow: ["oscuro", "sombra", "shadow", "ombre"],
-  primal: ["primigenio", "primal", "primitif"],
-  baby: ["bebé", "baby", "bébé"],
+  mega: ["mega", "megas", "méga", "mégas"],
+  legendary: [
+    "legendario",
+    "legendarios",
+    "legendary",
+    "legendaries",
+    "légendaire",
+    "légendaires",
+  ],
+  mythical: [
+    "mítico",
+    "míticos",
+    "mythical",
+    "mythicals",
+    "mythique",
+    "mythiques",
+    "fabuleux",
+  ],
+  ultra_beast: [
+    "ultraente",
+    "ultraentes",
+    "ultra beast",
+    "ultra beasts",
+    "ultra-chimère",
+    "ultra-chimères",
+  ],
+  shadow: ["oscuro", "oscuros", "sombra", "sombras", "shadow", "shadows", "ombre", "ombres"],
+  primal: ["primigenio", "primigenios", "primal", "primals", "primitif", "primitifs"],
+  baby: ["bebé", "bebés", "baby", "babies", "bébé", "bébés"],
 };
 
-/** Predicados de categoría contra el snapshot de 001 (RF-12). */
 export const CATEGORY_PREDICATES: Record<
   CategoryId,
   (boss: CategorySubject) => boolean
@@ -52,7 +85,6 @@ export const CATEGORY_PREDICATES: Record<
   baby: (boss) => boss.is_baby === true,
 };
 
-/** Igual que `search.normalize`, replicado aquí para no crear un ciclo T5→T2. */
 function normalizeAlias(text: string): string {
   return text
     .normalize("NFD")
@@ -73,20 +105,22 @@ const ALIAS_INDEX: ReadonlyMap<string, CategoryId> = (() => {
   return index;
 })();
 
-/**
- * Categoría cuyo alias **iguala** el texto normalizado (sin acentos y en
- * minúsculas), o `null` si no es ningún alias. Igualdad exacta, no prefijo.
- */
 export function matchCategory(query: string): CategoryId | null {
   const normalized = normalizeAlias(query).trim();
   if (!normalized) return null;
   return ALIAS_INDEX.get(normalized) ?? null;
 }
 
-/**
- * Evalúa el predicado de la categoría. Solo `true` estricto (o el enum exacto)
- * cuenta: `false`, `null` y un valor ausente no coinciden (RF-13).
- */
 export function matchesCategory(boss: CategorySubject, id: CategoryId): boolean {
   return CATEGORY_PREDICATES[id](boss);
+}
+
+export function matchesFilterChip(
+  boss: BossSnapshot,
+  chip: FilterChipId | null,
+  now: Date,
+): boolean {
+  if (chip === null) return true;
+  if (chip === "active") return isActive(boss, now);
+  return matchesCategory(boss, chip);
 }

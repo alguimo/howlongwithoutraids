@@ -1,5 +1,9 @@
 export type Language = "es" | "en" | "fr";
 
+export interface SnapshotMeta {
+  exported_at: string | null;
+}
+
 export interface BossSnapshot {
   dex_number: number;
   form: string;

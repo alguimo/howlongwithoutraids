@@ -25,6 +25,20 @@ export function isActive(boss: BossSnapshot, now: Date): boolean {
   return start <= now.getTime() && now.getTime() < end;
 }
 
+export function effectiveLastEndDate(boss: BossSnapshot, now: Date): string | null {
+  if (isActive(boss, now)) return boss.last_end_date;
+  const expiredCurrent =
+    boss.current_end && new Date(boss.current_end).getTime() <= now.getTime()
+      ? boss.current_end
+      : null;
+  if (boss.last_end_date && expiredCurrent) {
+    return new Date(expiredCurrent).getTime() > new Date(boss.last_end_date).getTime()
+      ? expiredCurrent
+      : boss.last_end_date;
+  }
+  return expiredCurrent ?? boss.last_end_date;
+}
+
 export function evaluate(boss: BossSnapshot, now: Date): Status {
   if (isActive(boss, now)) {
     return { kind: "active", days: 0, upcoming: false };
@@ -32,11 +46,12 @@ export function evaluate(boss: BossSnapshot, now: Date): Status {
 
   const upcoming =
     !!boss.current_start && new Date(boss.current_start).getTime() > now.getTime();
+  const endISO = effectiveLastEndDate(boss, now);
 
-  if (boss.last_end_date) {
-    const days = calendarDaysBetween(boss.last_end_date, now);
+  if (endISO) {
+    const days = calendarDaysBetween(endISO, now);
     return { kind: days === 0 ? "ended_today" : "drought", days, upcoming };
   }
 
-  return { kind: "upcoming", days: null, upcoming: true };
+  return { kind: "upcoming", days: null, upcoming };
 }

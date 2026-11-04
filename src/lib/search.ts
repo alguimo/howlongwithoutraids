@@ -1,5 +1,5 @@
 import { matchCategory, matchesCategory } from "./categories";
-import { baseName, displayName } from "./display";
+import { baseName, displayName, isBaseForm } from "./display";
 import type { BossSnapshot, Language } from "./types";
 
 export function normalize(text: string): string {
@@ -10,15 +10,7 @@ export function normalize(text: string): string {
 }
 
 /**
- * ¿Coincide el jefe con la consulta? (004 RF-11, RF-14, RF-15)
- *
- * La coincidencia es la **unión** de:
- *  - prefijo de dex (búsqueda heredada de 002 RF-11);
- *  - pertenencia a una categoría cuyo alias **iguala** el texto (RF-11);
- *  - nombre base (idioma activo o inglés) y nombre compuesto mostrado (RF-14).
- *
- * Una categoría nunca exige coincidencia de nombre: se suma. Un valor `null`
- * de categoría no entra porque el predicado exige `true` estricto (RF-13).
+ * ¿Coincide el jefe con la consulta? (004 RF-11, RF-14, RF-15; 010 RF-08)
  */
 export function matches(
   boss: BossSnapshot,
@@ -37,7 +29,13 @@ export function matches(
     return true;
   }
 
+  const formSlugMatch =
+    !isBaseForm(boss.form) &&
+    (normalize(boss.form).includes(query_) ||
+      normalize(boss.form.replace(/-/g, " ")).includes(query_));
+
   return (
+    formSlugMatch ||
     normalize(baseName(boss, lang)).includes(query_) ||
     normalize(boss.name).includes(query_) ||
     normalize(displayName(boss, lang)).includes(query_)

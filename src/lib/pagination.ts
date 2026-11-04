@@ -1,6 +1,12 @@
-/** Filas por página. La paginación vive entera en el cliente: el build solo
- *  pinta la primera página y el módulo nunca toca el DOM. */
-export const PAGE_SIZE = 20;
+/** Filas por página en SSR y vista móvil estrecha (≤767 px). En escritorio
+ *  (≥768 px) el cliente ajusta dinámicamente el tamaño al alto del viewport. */
+export const MOBILE_PAGE_SIZE = 12;
+export const PAGE_SIZE = MOBILE_PAGE_SIZE;
+
+export const MIN_DESKTOP_PAGE_SIZE = 6;
+export const MAX_DESKTOP_PAGE_SIZE = 25;
+export const DESKTOP_ROW_HEIGHT = 46;
+export const DESKTOP_MIN_WIDTH = 768;
 
 export interface PageState {
   /** Página actual, siempre >= 1. */
@@ -23,6 +29,31 @@ function safeSize(size: number): number {
 
 function safeTotal(total: number): number {
   return Number.isFinite(total) ? Math.max(0, Math.trunc(total)) : 0;
+}
+
+/** Calcula cuántas filas enteras caben en el espacio vertical libre de escritorio
+ *  (`≥768 px`), acotado entre `MIN_DESKTOP_PAGE_SIZE` y `MAX_DESKTOP_PAGE_SIZE`. */
+export function computeDesktopPageSize(
+  availableHeightPx: number,
+  rowHeightPx: number = DESKTOP_ROW_HEIGHT,
+): number {
+  if (!Number.isFinite(availableHeightPx) || !Number.isFinite(rowHeightPx) || rowHeightPx <= 0) {
+    return PAGE_SIZE;
+  }
+  const fit = Math.floor(availableHeightPx / rowHeightPx);
+  return Math.min(MAX_DESKTOP_PAGE_SIZE, Math.max(MIN_DESKTOP_PAGE_SIZE, fit));
+}
+
+/** Resuelve el tamaño de página según el corte único de layout (`767px` / `768px`). */
+export function resolveViewportPageSize(
+  viewportWidth: number,
+  availableHeightPx: number,
+  rowHeightPx: number = DESKTOP_ROW_HEIGHT,
+): number {
+  if (!Number.isFinite(viewportWidth) || viewportWidth < DESKTOP_MIN_WIDTH) {
+    return MOBILE_PAGE_SIZE;
+  }
+  return computeDesktopPageSize(availableHeightPx, rowHeightPx);
 }
 
 /** Número de páginas necesarias para `total` filas. 0 si no hay filas. */

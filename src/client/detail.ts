@@ -90,6 +90,8 @@ export function detailActionFor(
       case "pointerleave":
       case "blur":
         return "close";
+      case "activate":
+        return hasContent ? "toggle" : "none";
       default:
         return "none";
     }
@@ -137,6 +139,7 @@ interface OpenDetail {
   button: HTMLButtonElement;
   panel: HTMLTableRowElement;
   floating: boolean;
+  pinned: boolean;
   /** Posición original del nodo en `<tbody>`, para devolverlo al cerrar. */
   home: { parent: Node; next: Node | null } | null;
 }
@@ -248,8 +251,11 @@ export function mountDetails(
     return true;
   };
 
-  const openDetail = (button: HTMLButtonElement): void => {
-    if (current?.button === button) return;
+  const openDetail = (button: HTMLButtonElement, pinned = false): void => {
+    if (current?.button === button) {
+      if (pinned) current.pinned = true;
+      return;
+    }
     closeAllDetails();
     const panel = panelFor(button);
     if (!panel || !hasContent(panel)) return;
@@ -261,20 +267,24 @@ export function mountDetails(
       panel.classList.remove(HIDDEN_CLASS);
       if (!place(button, panel)) {
         // No cabe en ningún lado: se deshace el traslado y todo queda cerrado.
-        current = { button, panel, floating: true, home };
+        current = { button, panel, floating: true, pinned: false, home };
         closeAllDetails();
         return;
       }
-      current = { button, panel, floating: true, home };
+      current = { button, panel, floating: true, pinned, home };
+      button.setAttribute("aria-describedby", LAYER_ID);
     } else {
       setRoles(panel, "row");
       panel.classList.remove(HIDDEN_CLASS);
-      current = { button, panel, floating: false, home: null };
+      current = { button, panel, floating: false, pinned: true, home: null };
     }
     button.setAttribute("aria-expanded", "true");
   };
 
   const closeAllDetails = (): void => {
+    if (current?.button) {
+      current.button.removeAttribute("aria-describedby");
+    }
     // Devolver el nodo a la tabla ANTES de plegar: el nodo único vuelve a vivir
     // en `<tbody>` (RF-39) y el siguiente `openDetail` puede reubicarlo.
     if (current?.floating) restoreToTable(current);
@@ -299,7 +309,7 @@ export function mountDetails(
   };
 
   const onPointerOut = (event: Event): void => {
-    if (mode !== "tooltip") return;
+    if (mode !== "tooltip" || current?.pinned) return;
     const cell = dateCell(event.target);
     if (!cell) return;
     // Mover el puntero dentro de la misma celda no es «salir».
@@ -317,7 +327,7 @@ export function mountDetails(
   };
 
   const onFocusOut = (event: Event): void => {
-    if (mode !== "tooltip") return;
+    if (mode !== "tooltip" || current?.pinned) return;
     const button = buttonFrom(event.target);
     if (!button || current?.button !== button) return;
     handle("blur", button);
@@ -325,12 +335,25 @@ export function mountDetails(
 
   const onListClick = (event: Event): void => {
     const button = buttonFrom(event.target);
-    if (button) handle("activate", button);
+    if (!button) return;
+    if (mode === "tooltip") {
+      if (current?.button === button && !current.pinned) {
+        current.pinned = true;
+        return;
+      }
+      const panel = panelFor(button);
+      const action = detailActionFor("activate", mode, !!panel && hasContent(panel));
+      if (action === "none") return;
+      if (nextExpanded(current?.button === button, action)) openDetail(button, true);
+      else closeAllDetails();
+      return;
+    }
+    handle("activate", button);
   };
 
-  /** RF-33: en táctil, un toque fuera de la fecha y de la fila la repliega. */
+  /** En táctil o con tooltip fijado por clic, tocar/clicar fuera cierra el detalle. */
   const onDocumentClick = (event: Event): void => {
-    if (mode !== "row") return;
+    if (mode !== "row" && !current?.pinned) return;
     const target = event.target as HTMLElement | null;
     if (target?.closest("[data-detail]")) return;
     if (target?.closest(".detail-row")) return;
@@ -350,12 +373,19 @@ export function mountDetails(
     lastWidth = width;
   };
 
+  const onKeyDown = (event: Event): void => {
+    if ((event as KeyboardEvent).key === "Escape") {
+      closeAllDetails();
+    }
+  };
+
   listEl.addEventListener("pointerover", onPointerOver);
   listEl.addEventListener("pointerout", onPointerOut);
   listEl.addEventListener("focusin", onFocusIn);
   listEl.addEventListener("focusout", onFocusOut);
   listEl.addEventListener("click", onListClick);
   doc.addEventListener("click", onDocumentClick);
+  doc.addEventListener("keydown", onKeyDown);
   media.addEventListener("change", onModeChange);
   win.addEventListener("resize", onResize);
 
@@ -368,6 +398,7 @@ export function mountDetails(
       listEl.removeEventListener("focusout", onFocusOut);
       listEl.removeEventListener("click", onListClick);
       doc.removeEventListener("click", onDocumentClick);
+      doc.removeEventListener("keydown", onKeyDown);
       media.removeEventListener("change", onModeChange);
       win.removeEventListener("resize", onResize);
       if (host.childElementCount === 0) host.remove();

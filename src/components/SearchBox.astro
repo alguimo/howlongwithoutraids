@@ -1,14 +1,40 @@
 ---
+import { t } from "../lib/i18n";
 ---
 
-<div class="mt-4">
-  <label class="sr-only" for="search" data-i18n="search_placeholder">Search by name or dex</label>
+<div class="relative mt-2.5">
+  <label class="sr-only" for="search" data-i18n="search_placeholder">{t("en", "search_placeholder")}</label>
+  <div class="search-icon pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false">
+      <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
+    </svg>
+  </div>
   <input
     id="search"
     type="search"
     autocomplete="off"
     data-i18n-placeholder="search_placeholder"
-    placeholder="Search by name or dex"
-    class="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-base text-neutral-100 outline-none placeholder:text-neutral-400 focus:border-neutral-500"
+    placeholder={t("en", "search_placeholder")}
+    class="search-input w-full rounded-lg py-2 pl-9 pr-9 text-base outline-none transition-colors"
   />
+  <div class="absolute inset-y-0 right-0 flex items-center pr-2.5">
+    <button
+      id="search-clear-btn"
+      type="button"
+      hidden
+      aria-label={t("en", "clear_search")}
+      data-i18n-aria-label="clear_search"
+      class="search-clear-btn rounded p-1 transition-colors outline-none"
+    >
+      <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false">
+        <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+      </svg>
+    </button>
+    <span class="hidden sm:inline-flex">
+      <kbd
+        id="search-kbd"
+        class="search-kbd inline-flex items-center rounded px-1.5 py-0.5 font-mono text-[10px] select-none"
+      >/</kbd>
+    </span>
+  </div>
 </div>

@@ -1,7 +1,15 @@
 ---
+import { footerUpdatedText } from "../lib/html";
+
+interface Props {
+  exportedAt: string | null;
+}
+
+const { exportedAt } = Astro.props;
+const updated = footerUpdatedText(exportedAt, "en");
 ---
 
-<footer class="mt-10 border-t border-neutral-800 pt-4 text-sm text-neutral-400">
+<footer class="app-footer mt-auto pt-3 text-xs sm:text-sm">
   <span data-i18n="footer_data">Data from</span>
   <a class="underline underline-offset-4" href="https://leekduck.com" rel="noopener">LeekDuck</a>
   <span aria-hidden="true">·</span>
@@ -9,4 +17,8 @@
     class="underline underline-offset-4"
     href="https://github.com/bigfoott/ScrapedDuck"
     rel="noopener">ScrapedDuck</a>
+  <span data-footer-updated-wrap hidden={updated === null}>
+    <span aria-hidden="true">·</span>
+    <span data-footer-updated>{updated ?? ""}</span>
+  </span>
 </footer>

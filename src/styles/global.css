@@ -1,5 +1,550 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------------
+ * Spec 010 RF-01, RF-02 — Sistema Dual de Temas (Oscuro Pizarra-Noche y
+ * Claro Piedra Cálida). Todos los pares texto/superficie cumplen WCAG 2.1 AA
+ * (≥ 4.5:1) verificados matemáticamente en `tests/contrast.test.ts`.
+ * ------------------------------------------------------------------------- */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-page: #0b101b;
+  --bg-header: #111827;
+  --bg-surface: #141d2e;
+  --bg-surface-hover: #1e293b;
+  --bg-row-hover: #131c2e;
+  --border-subtle: #1e293b;
+  --border-control: #334155;
+  --ring-focus: #64748b;
+
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #8e9fb7;
+
+  --drought-mild: #94a3b8;
+  --drought-medium: #e2e8f0;
+  --drought-long: #fbbf24;
+  --drought-extreme: #fb7185;
+
+  --status-active-bg: #062e24;
+  --status-active-fg: #6ee7b7;
+  --status-active-border: #065f46;
+  --status-active-dot: #34d399;
+
+  --status-upcoming-bg: #2e1f05;
+  --status-upcoming-fg: #fcd34d;
+  --status-upcoming-border: #78350f;
+
+  --header-stat-fg: #6ee7b7;
+  --header-stat-icon: #34d399;
+
+  --tier-t1-bg: #381028;
+  --tier-t1-fg: #f9a8d4;
+  --tier-t1-border: #831843;
+
+  --tier-t3-bg: #332006;
+  --tier-t3-fg: #fcd34d;
+  --tier-t3-border: #78350f;
+
+  --tier-t5-bg: #1b1a3a;
+  --tier-t5-fg: #fde68a;
+  --tier-t5-border: #4338ca;
+
+  --tier-mega-bg: #082a36;
+  --tier-mega-fg: #67e8f9;
+  --tier-mega-border: #155e75;
+
+  --tier-primal-bg: #3b1119;
+  --tier-primal-fg: #fda4af;
+  --tier-primal-border: #9f1239;
+
+  --tier-shadow-bg: #27103d;
+  --tier-shadow-fg: #d8b4fe;
+  --tier-shadow-border: #6b21a8;
+
+  --tier-elite-bg: #381217;
+  --tier-elite-fg: #fca5a5;
+  --tier-elite-border: #991b1b;
+
+  --tier-default-bg: #1e293b;
+  --tier-default-fg: #cbd5e1;
+  --tier-default-border: #334155;
+
+  --shadow-floating: 0 12px 28px rgb(0 0 0 / 0.55);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg-page: #f6f5f1;
+  --bg-header: #ffffff;
+  --bg-surface: #ffffff;
+  --bg-surface-hover: #eeece6;
+  --bg-row-hover: #efede7;
+  --border-subtle: #e2dfd7;
+  --border-control: #cbd5e1;
+  --ring-focus: #475569;
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #526075;
+
+  --drought-mild: #475569;
+  --drought-medium: #0f172a;
+  --drought-long: #92400e;
+  --drought-extreme: #be123c;
+
+  --status-active-bg: #dcfce7;
+  --status-active-fg: #065f46;
+  --status-active-border: #86efac;
+  --status-active-dot: #059669;
+
+  --status-upcoming-bg: #fef3c7;
+  --status-upcoming-fg: #92400e;
+  --status-upcoming-border: #fcd34d;
+
+  --header-stat-fg: #065f46;
+  --header-stat-icon: #059669;
+
+  --tier-t1-bg: #fce7f3;
+  --tier-t1-fg: #9d174d;
+  --tier-t1-border: #f9a8d4;
+
+  --tier-t3-bg: #fef3c7;
+  --tier-t3-fg: #92400e;
+  --tier-t3-border: #fcd34d;
+
+  --tier-t5-bg: #e0e7ff;
+  --tier-t5-fg: #312e81;
+  --tier-t5-border: #a5b4fc;
+
+  --tier-mega-bg: #cffafe;
+  --tier-mega-fg: #155e75;
+  --tier-mega-border: #67e8f9;
+
+  --tier-primal-bg: #ffe4e6;
+  --tier-primal-fg: #9f1239;
+  --tier-primal-border: #fda4af;
+
+  --tier-shadow-bg: #f3e8ff;
+  --tier-shadow-fg: #581c87;
+  --tier-shadow-border: #d8b4fe;
+
+  --tier-elite-bg: #fee2e2;
+  --tier-elite-fg: #991b1b;
+  --tier-elite-border: #fca5a5;
+
+  --tier-default-bg: #f1f5f9;
+  --tier-default-fg: #334155;
+  --tier-default-border: #cbd5e1;
+
+  --shadow-floating: 0 12px 28px rgb(15 23 42 / 0.14);
+}
+
+/* Garantiza que el atributo HTML `hidden` gane siempre sobre `flex`/`inline-flex` */
+[hidden] {
+  display: none !important;
+}
+
+/* RF-04: oculta el botón nativo de limpieza de `<input type="search">` */
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+body {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+}
+
+main {
+  flex: 1 1 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Conmutador de tema Sol / Luna */
+.theme-toggle-btn,
+.lang-trigger-btn {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-control);
+  color: var(--text-primary);
+}
+
+.theme-toggle-btn:hover,
+.lang-trigger-btn:hover {
+  background-color: var(--bg-surface-hover);
+}
+
+.theme-toggle-btn:focus-visible,
+.lang-trigger-btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring-focus);
+}
+
+.theme-icon-moon {
+  display: none;
+}
+
+:root[data-theme="light"] .theme-icon-sun {
+  display: none;
+}
+
+:root[data-theme="light"] .theme-icon-moon {
+  display: block;
+}
+
+.lang-menu-popup {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-control);
+  box-shadow: var(--shadow-floating);
+}
+
+.lang-menu-option {
+  color: var(--text-secondary);
+}
+
+.lang-menu-option:hover,
+.lang-menu-option:focus {
+  background-color: var(--bg-surface-hover);
+  color: var(--text-primary);
+}
+
+.lang-menu-option[aria-selected="true"] {
+  background-color: var(--bg-surface-hover);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* Subtítulo e indicador editorial de incursiones activas en cabecera */
+.header-subtitle {
+  color: var(--text-secondary);
+}
+
+.header-raid-stat {
+  color: var(--header-stat-fg);
+}
+
+.header-raid-icon {
+  color: var(--header-stat-icon);
+}
+
+/* Buscador */
+.search-icon {
+  color: var(--text-muted);
+}
+
+.search-input {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-control);
+  color: var(--text-primary);
+}
+
+.search-input::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+.search-input:focus {
+  border-color: var(--ring-focus);
+  box-shadow: 0 0 0 1px var(--ring-focus);
+}
+
+.search-clear-btn {
+  color: var(--text-muted);
+}
+
+.search-clear-btn:hover {
+  color: var(--text-primary);
+}
+
+.search-kbd {
+  background-color: var(--bg-surface-hover);
+  border: 1px solid var(--border-control);
+  color: var(--text-muted);
+}
+
+/* FilterBar: chips temáticos, contador vivo y selector de orden */
+.filter-chip {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-control);
+  color: var(--text-secondary);
+}
+
+.filter-chip:hover {
+  background-color: var(--bg-surface-hover);
+  color: var(--text-primary);
+}
+
+.filter-chip:focus-visible,
+.sort-select:focus-visible,
+.pager-btn:focus-visible,
+.date-trigger:focus-visible,
+.empty-clear-btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring-focus);
+}
+
+.filter-chip[data-filter-chip="active"][aria-pressed="true"] {
+  background-color: var(--status-active-bg);
+  border-color: var(--status-active-border);
+  color: var(--status-active-fg);
+}
+
+.filter-chip[data-filter-chip="legendary"][aria-pressed="true"] {
+  background-color: var(--tier-t5-bg);
+  border-color: var(--tier-t5-border);
+  color: var(--tier-t5-fg);
+}
+
+.filter-chip[data-filter-chip="mega"][aria-pressed="true"] {
+  background-color: var(--tier-mega-bg);
+  border-color: var(--tier-mega-border);
+  color: var(--tier-mega-fg);
+}
+
+.filter-chip[data-filter-chip="shadow"][aria-pressed="true"] {
+  background-color: var(--tier-shadow-bg);
+  border-color: var(--tier-shadow-border);
+  color: var(--tier-shadow-fg);
+}
+
+.filter-chip[data-filter-chip="ultra_beast"][aria-pressed="true"] {
+  background-color: var(--tier-mega-bg);
+  border-color: var(--tier-mega-border);
+  color: var(--tier-mega-fg);
+}
+
+.filter-chip[data-filter-chip="mythical"][aria-pressed="true"] {
+  background-color: var(--tier-t1-bg);
+  border-color: var(--tier-t1-border);
+  color: var(--tier-t1-fg);
+}
+
+.results-count,
+.sort-label {
+  color: var(--text-muted);
+}
+
+.sort-select {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-control);
+  color: var(--text-primary);
+}
+
+/* Tabla, encabezados ordenables, avatares, sequía y badges */
+.table-head-cell {
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.sort-head-btn {
+  color: inherit;
+  cursor: pointer;
+}
+
+.sort-head-btn:hover {
+  color: var(--text-primary);
+}
+
+tbody .boss-row {
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background-color 0.12s ease;
+}
+
+@media (hover: hover) {
+  tbody .boss-row:hover {
+    background-color: var(--bg-row-hover);
+  }
+}
+
+.boss-initials {
+  background-color: var(--bg-surface-hover);
+  border: 1px solid var(--border-control);
+  color: var(--text-secondary);
+}
+
+.boss-name-cell {
+  color: var(--text-primary);
+}
+
+.dex-num,
+.drought-years {
+  color: var(--text-muted);
+}
+
+.dex-hash {
+  opacity: 0.75;
+}
+
+.drought-mild {
+  color: var(--drought-mild);
+}
+
+.drought-medium {
+  color: var(--drought-medium);
+}
+
+.drought-long {
+  color: var(--drought-long);
+  font-weight: 500;
+}
+
+.drought-extreme {
+  color: var(--drought-extreme);
+  font-weight: 600;
+}
+
+.status-badge-active {
+  background-color: var(--status-active-bg);
+  border: 1px solid var(--status-active-border);
+  color: var(--status-active-fg);
+}
+
+.status-dot-active {
+  background-color: var(--status-active-dot);
+}
+
+.status-badge-upcoming {
+  background-color: var(--status-upcoming-bg);
+  border: 1px solid var(--status-upcoming-border);
+  color: var(--status-upcoming-fg);
+}
+
+.tier-badge-normal {
+  background-color: var(--tier-t1-bg);
+  border: 1px solid var(--tier-t1-border);
+  color: var(--tier-t1-fg);
+}
+
+.tier-badge-rare {
+  background-color: var(--tier-t3-bg);
+  border: 1px solid var(--tier-t3-border);
+  color: var(--tier-t3-fg);
+}
+
+.tier-badge-legendary {
+  background-color: var(--tier-t5-bg);
+  border: 1px solid var(--tier-t5-border);
+  color: var(--tier-t5-fg);
+}
+
+.tier-badge-mega {
+  background-color: var(--tier-mega-bg);
+  border: 1px solid var(--tier-mega-border);
+  color: var(--tier-mega-fg);
+}
+
+.tier-badge-primal {
+  background-color: var(--tier-primal-bg);
+  border: 1px solid var(--tier-primal-border);
+  color: var(--tier-primal-fg);
+}
+
+.tier-badge-shadow {
+  background-color: var(--tier-shadow-bg);
+  border: 1px solid var(--tier-shadow-border);
+  color: var(--tier-shadow-fg);
+}
+
+.tier-badge-elite {
+  background-color: var(--tier-elite-bg);
+  border: 1px solid var(--tier-elite-border);
+  color: var(--tier-elite-fg);
+}
+
+.tier-badge-default {
+  background-color: var(--tier-default-bg);
+  border: 1px solid var(--tier-default-border);
+  color: var(--tier-default-fg);
+}
+
+.date-trigger {
+  color: var(--text-secondary);
+  text-decoration-color: var(--border-control);
+  cursor: pointer;
+}
+
+.date-trigger:hover {
+  color: var(--text-primary);
+  text-decoration-color: var(--text-secondary);
+}
+
+.detail-line {
+  color: var(--text-secondary);
+}
+
+.detail-event-name,
+.detail-count {
+  color: var(--text-primary);
+}
+
+.detail-event-tag {
+  background-color: var(--bg-surface-hover);
+  color: var(--text-primary);
+}
+
+/* Estado vacío, paginación y pie de página */
+.empty-state {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+}
+
+.empty-illustration {
+  color: var(--text-muted);
+}
+
+.empty-title {
+  color: var(--text-primary);
+}
+
+.empty-hint {
+  color: var(--text-secondary);
+}
+
+.empty-clear-btn {
+  background-color: var(--bg-surface-hover);
+  border: 1px solid var(--border-control);
+  color: var(--text-primary);
+}
+
+.empty-clear-btn:hover {
+  border-color: var(--ring-focus);
+}
+
+.pager-btn {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-control);
+  color: var(--text-primary);
+}
+
+.pager-btn:hover:not(:disabled) {
+  background-color: var(--bg-surface-hover);
+}
+
+.pager-btn:disabled {
+  opacity: 0.42;
+}
+
+.page-range {
+  color: var(--text-muted);
+}
+
+.app-footer {
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+}
+
+.app-footer a {
+  color: var(--text-secondary);
+}
+
+.app-footer a:hover {
+  color: var(--text-primary);
+}
+
 /* Estado cerrado del detalle. La clase `hidden` lo esconde en los dos entornos
    y sin ninguna media query a propósito: el nodo solo se muestra cuando el
    cliente se la quita, y ese cliente es quien decide el modo (RF-41). */
@@ -8,51 +553,27 @@
 }
 
 /* RF-33, RF-35: la fila desplegable es la representación del detalle SOLO en
-   `(hover: none)`. Aquí ya no hay ninguna regla `.boss-row:hover + .detail-row`
-   ni `.boss-row:focus-within + .detail-row`: abrir el detalle al rozar el
-   nombre, la sequía o el tier hace saltar el contenido bajo el cursor y choca
-   con el tooltip de la celda de fecha (RF-31), que desde V16 es el único
-   disparador en `(hover: hover)`. */
+   `(hover: none)`. */
 @media (hover: none) {
-  /* Se declara aunque sea el `display` inicial de un `<tr>`, para que quede
-     escrito que esta es la única caja en la que la fila existe. La clase
-     `hidden` (dos clases, 0,2,0) gana a esta regla (una clase, 0,1,0) y la
-     sigue escondiendo hasta que un toque la quite. */
   .detail-row {
     display: table-row;
   }
 }
 
-/* RF-35, RF-41: en un entorno con puntero la fila desplegable no es un estado
-   que el JS evita, es un estado que el CSS ni siquiera deja pintar. Así el clic
-   y `Enter`/`Espacio` sobre la fecha no pueden abrirla por la vía del estilo
-   (V21 apaga además esos disparadores en el JS; esta es la red de seguridad).
-
-   El veto va anclado al `tbody` a propósito: el nodo único es la misma fila, y
-   cuando V16/V21 la cuelguen del host flotante seguirá llevando `.detail-row`
-   pero ya no será hija de `tbody`, así que este veto no puede apagar el tooltip
-   que la spec manda en `(hover: hover)`. Un `display: none` sobre `.detail-row`
-   a secas lo apagaría, y por eso no está. */
+/* RF-35, RF-41: en un entorno con puntero la fila desplegable es imposible
+   dentro de `tbody`, sin apagar el nodo cuando se cuelga de `#detail-layer`. */
 @media (hover: hover) {
   tbody .detail-row {
     display: none;
   }
 }
 
-/* RF-32: el panel flotante no captura el puntero. Se limita a la representación
-   flotante —cuando V21 ponga `role="tooltip"`—, no a la fila desplegada en
-   táctil, donde tocar dentro del detalle no debe atravesarlo. Un tooltip que
-   roba el hover se cierra solo al mover el puntero hacia él y estorba justo
-   cuando se está leyendo (RF-32). */
+/* RF-32: el panel flotante no captura el puntero. */
 .detail-row[role="tooltip"] {
   pointer-events: none;
 }
 
-/* V21, RF-39, R2: host flotante del nodo único de detalle. Lo crea `detail.ts`
-   al montar; no vive en `index.astro` para no meter un div vacío en el marcado.
-   Es `fixed` en el origen de la ventana para que las coordenadas de
-   `placeTooltip` (píxeles de viewport) se apliquen tal cual, y no captura el
-   puntero porque el tooltip tampoco lo hace (RF-32). */
+/* V21, RF-39: host flotante del nodo único de detalle. */
 #detail-layer {
   position: fixed;
   inset: 0;
@@ -60,19 +581,15 @@
   pointer-events: none;
 }
 
-/* Un `<tr>` fuera de `<tbody>` deja de ser una fila de tabla y no se pinta si
-   nadie le da una caja. El host se la devuelve explícita a la fila y a su celda:
-   ahí el detalle es un panel, no una fila. El veto de `(hover: hover)` de V15
-   está anclado a `tbody`, así que no alcanza a este nodo. */
 #detail-layer .detail-row {
   position: absolute;
   display: block;
   width: max-content;
-  max-width: min(20rem, calc(100vw - 1rem));
-  background-color: var(--color-neutral-900);
-  border: 1px solid var(--color-neutral-800);
+  max-width: min(22rem, calc(100vw - 1rem));
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-control);
   border-radius: 0.5rem;
-  box-shadow: 0 10px 25px rgb(0 0 0 / 0.5);
+  box-shadow: var(--shadow-floating);
 }
 
 #detail-layer .detail-row > td {
@@ -81,18 +598,14 @@
 }
 
 /* RF-29, RF-30, RF-42: barra de la cabecera. Una sola instancia, montada como
-   hermana anterior de <main>. El tono es propio y opaco (neutral-900 sobre el
-   neutral-950 de la página) con borde inferior, para que al hacer scroll la
-   primera fila no se lea a través de ella. */
+   hermana anterior de <main>, con tono propio opaco distinto del fondo de
+   página y borde inferior. */
 .app-header {
-  background-color: var(--color-neutral-900);
-  border-bottom: 1px solid var(--color-neutral-800);
+  background-color: var(--bg-header);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
-/* RF-29: pegado solo en ventana ancha (≥768 px, el único corte de layout de la
-   spec). En estrecho la cabecera fluye con el documento y no roba altura útil
-   a la tabla. Es el único `sticky` de la página (RF-42): no hay anidamientos
-   ni ancestros con scroll que lo anulen. */
+/* RF-29: pegado solo en ventana ancha (≥768 px, el único corte de layout). */
 @media (min-width: 768px) {
   .app-header {
     position: sticky;
@@ -101,19 +614,9 @@
   }
 }
 
-/* En ventana estrecha (≤767 px) cada fila se comporta como una tarjeta apilada,
-   sin desplazamiento horizontal.
-
-   Este es el ÚNICO corte de layout de la spec («Definiciones»): estrecho es
-   767 px o menos y ancho es 768 px o más. Cualquier otro número de anchura
-   (el 640 px que hubo aquí antes) deja dos cortes contradictorios en el mismo
-   fichero. Ojo: el modo del detalle NO se decide aquí, lo decide
-   `(hover: hover)` / `(hover: none)` (RF-41), así que aquí no aparece `hover`. */
+/* En ventana estrecha (≤767 px) cada fila se comporta como una tarjeta apilada
+   compacta sin desplazamiento horizontal. Único `max-width` del fichero. */
 @media (max-width: 767px) {
-  /* RF-18: los encabezados no se ven pero se conservan. El recorte es
-     absolutos + clip, nunca `display: none` ni `visibility: hidden`, porque
-     esos dos últimos sacan el nodo del árbol de accesibilidad y el lector de
-     pantalla pierde la fila de encabezado (RF-43). */
   thead {
     position: absolute;
     width: 1px;
@@ -123,22 +626,15 @@
     white-space: nowrap;
   }
 
-  /* La fila se apila como tarjeta. `flex-wrap` permite que el sprite y el
-     nombre quepan en la primera línea y que el resto de celdas baje a la
-     siguiente, sin partir la fila en dos cajas (RF-15). Los roles del marcado
-     (V13) son los que sostienen la semántica de tabla: aquí solo cambia el
-     `display`, nunca el rol. */
   .boss-row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    /* El `border-b` de las clases del marcado no aplica aquí: este fichero va
-       sin capa de Tailwind, así que el atajo `border` gana y la tarjeta queda
-       con su borde completo, como antes. */
-    border: 1px solid var(--color-neutral-800);
-    border-radius: 0.5rem;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.625rem;
     margin-bottom: 0.5rem;
-    padding: 0.5rem;
+    padding: 0.5rem 0.625rem;
   }
 
   .boss-row > td {
@@ -146,53 +642,48 @@
     flex: 1 1 100%;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
-    padding: 0.125rem 0.25rem;
+    gap: 0.5rem;
+    padding: 0.125rem 0.125rem;
   }
 
-  /* La celda del sprite no lleva etiqueta: una etiqueta «Imagen» delante de un
-     sprite es ruido y el nombre del jefe ya está al lado (RF-15). `flex: 0 0
-     auto` la deja en su tamaño natural en lugar de estirarla a toda la línea. */
   .boss-row > td:first-child {
     flex: 0 0 auto;
     padding-inline: 0;
+    margin-right: 0.375rem;
   }
 
-  /* La celda del nombre se queda en la primera línea, junto al sprite, y su
-     etiqueta queda a la izquierda en lugar de flotar al extremo opuesto. */
   .boss-row > td:nth-child(2) {
     flex: 1 1 auto;
     justify-content: flex-start;
+    padding-bottom: 0.25rem;
+    margin-bottom: 0.125rem;
+    border-bottom: 1px solid var(--border-subtle);
   }
 
-  /* Etiqueta de columna del resto de celdas: sale de `data-label`, que
-     `html.ts` ya escribe traducido. */
-  .boss-row > td:not(:first-child)::before {
+  /* Spec 010 RF-09: solo las celdas 3 (Última aparición), 4 (Fecha) y 5 (Tier)
+     muestran etiqueta traducida; ni el sprite ni el nombre repiten `POKÉMON`. */
+  .boss-row > td:nth-child(n + 3)::before {
     content: attr(data-label);
     font-size: 0.6875rem;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    /* RF-21: `neutral-500` sobre el `bg-neutral-950` de la página daba 4.18:1.
-       `neutral-400` sube a 7.63:1 sin romper la jerarquía: la etiqueta es más
-       apagada que el valor porque es `0.6875rem` en mayúsculas. */
-    color: var(--color-neutral-400);
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
   }
 
   .detail-row td {
     display: block;
-    border-bottom: 1px solid var(--color-neutral-800);
-    padding: 0.25rem 0.5rem 0.5rem;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.5rem;
+    margin-top: -0.25rem;
+    margin-bottom: 0.5rem;
+    padding: 0.375rem 0.625rem 0.5rem;
   }
 
-  /* Ni aquí una copia de `.detail-row.hidden { display: none }`: esa regla es
-     global y ya esconde la fila en ventana estrecha. Repetirla convertía un
-     duplicado sin valor en algo que el test tenía que defender. */
-
-  /* Áreas de toque cómodas para los controles de paginación. */
   #pagination button {
-    min-height: 2.75rem;
-    min-width: 2.75rem;
-    padding-inline: 1rem;
+    min-height: 2.5rem;
+    min-width: 2.5rem;
+    padding-inline: 0.625rem;
   }
 
   #pagination [data-page-range] {

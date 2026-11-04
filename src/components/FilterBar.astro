@@ -1,0 +1,55 @@
+---
+import { FILTER_CHIPS } from "../lib/categories";
+import { chipIconSvg } from "../lib/eggs";
+import { t } from "../lib/i18n";
+import { SORT_MODES } from "../lib/order";
+---
+
+<div class="filter-bar mb-3 flex flex-wrap items-center justify-between gap-2.5 text-sm">
+  <div
+    role="group"
+    aria-label={t("en", "filter_group_label")}
+    data-i18n-aria-label="filter_group_label"
+    class="flex flex-wrap items-center gap-1.5"
+  >
+    {
+      FILTER_CHIPS.map((id) => (
+        <button
+          type="button"
+          data-filter-chip={id}
+          aria-pressed="false"
+          class="filter-chip inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium outline-none transition-colors"
+        >
+          <span class="inline-flex shrink-0" set:html={chipIconSvg(id)} />
+          <span data-i18n={`chip_${id}`}>{t("en", `chip_${id}`)}</span>
+        </button>
+      ))
+    }
+  </div>
+
+  <div class="flex items-center gap-3">
+    <span
+      id="results-count"
+      data-results-count
+      class="results-count text-xs tabular-nums"
+      aria-live="polite"
+    ></span>
+    <div class="flex items-center gap-1.5">
+      <label for="sort" data-i18n="sort_label" class="sort-label text-xs">
+        {t("en", "sort_label")}
+      </label>
+      <select
+        id="sort"
+        class="sort-select rounded-md px-2.5 py-1 text-xs outline-none transition-colors"
+      >
+        {
+          SORT_MODES.map((mode) => (
+            <option value={mode} data-i18n={`sort_${mode}`}>
+              {t("en", `sort_${mode}`)}
+            </option>
+          ))
+        }
+      </select>
+    </div>
+  </div>
+</div>

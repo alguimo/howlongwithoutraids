@@ -5,5 +5,8 @@ export default defineConfig({
   output: "static",
   vite: {
     plugins: [tailwind()],
+    build: {
+      chunkSizeWarningLimit: 700,
+    },
   },
 });

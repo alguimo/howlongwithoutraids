@@ -1,26 +1,26 @@
+import speciesNames from "../data/species-names.json";
 import type { BossSnapshot, Language } from "./types";
+
+const MANUAL_OVERRIDES: Record<Language, Record<string, string>> = {
+  en: {},
+  es: {
+    "157-hisui": "Typhlosion de Hisui",
+  },
+  fr: {
+    "71-mega": "Méga-Empiflor",
+    "157-hisui": "Typhlosion de Hisui",
+  },
+};
 
 export const NAME_DICTIONARIES: Record<Language, Record<string, string>> = {
   en: {},
   es: {
-    "150": "Mewtwo",
-    "157": "Typhlosion",
-    "157-hisui": "Typhlosion de Hisui",
-    "25": "Pikachu",
-    "71": "Victreebel",
-    "384": "Rayquaza",
-    "642": "Thundurus",
-    "716": "Xerneas",
+    ...(speciesNames as { es: Record<string, string>; fr: Record<string, string> }).es,
+    ...MANUAL_OVERRIDES.es,
   },
   fr: {
-    "150": "Mewtwo",
-    "71": "Empiflor",
-    "71-mega": "Méga-Empiflor",
-    "157-hisui": "Typhlosion de Hisui",
-    "25": "Pikachu",
-    "384": "Rayquaza",
-    "642": "Thundurus",
-    "716": "Xerneas",
+    ...(speciesNames as { es: Record<string, string>; fr: Record<string, string> }).fr,
+    ...MANUAL_OVERRIDES.fr,
   },
 };
 

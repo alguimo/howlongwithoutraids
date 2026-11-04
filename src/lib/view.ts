@@ -1,4 +1,4 @@
-import { evaluate, type StatusKind } from "./counter";
+import { effectiveLastEndDate, evaluate, type StatusKind } from "./counter";
 import { displayName } from "./display";
 import { t } from "./i18n";
 import type { BossSnapshot, Language } from "./types";
@@ -10,6 +10,7 @@ export interface RowView {
   upcoming: boolean;
   dateISO: string | null;
   statusText: string;
+  approxYearsText: string | null;
 }
 
 export interface DetailLine {
@@ -18,6 +19,18 @@ export interface DetailLine {
   event: boolean;
   /** Nombre del evento de esa aparición o de la ventana vigente/próxima. */
   eventName: string | null;
+}
+
+export function formatDayCount(days: number, lang: Language): string {
+  return new Intl.NumberFormat(lang, { useGrouping: "always" }).format(days);
+}
+
+export function formatApproxYears(days: number | null, lang: Language): string | null {
+  if (days === null || days < 365) return null;
+  const raw = days / 365.25;
+  const rounded = raw >= 5 ? Math.round(raw) : Math.round(raw * 2) / 2;
+  const formatted = new Intl.NumberFormat(lang, { maximumFractionDigits: 1 }).format(rounded);
+  return t(lang, "approx_years", { y: formatted });
 }
 
 export function rowView(boss: BossSnapshot, now: Date, lang: Language): RowView {
@@ -31,8 +44,9 @@ export function rowView(boss: BossSnapshot, now: Date, lang: Language): RowView 
   } else if (status.kind === "upcoming") {
     statusText = t(lang, "upcoming");
   } else {
-    const key = status.days === 1 ? "day" : "days";
-    statusText = t(lang, key, { n: status.days ?? 0 });
+    const count = status.days ?? 0;
+    const key = count === 1 ? "day" : "days";
+    statusText = t(lang, key, { n: formatDayCount(count, lang) });
   }
 
   const dateISO =
@@ -40,7 +54,10 @@ export function rowView(boss: BossSnapshot, now: Date, lang: Language): RowView 
       ? boss.current_end
       : status.kind === "upcoming"
         ? boss.current_start
-        : boss.last_end_date;
+        : effectiveLastEndDate(boss, now);
+
+  const approxYearsText =
+    status.kind === "drought" ? formatApproxYears(status.days, lang) : null;
 
   return {
     name: displayName(boss, lang),
@@ -49,6 +66,7 @@ export function rowView(boss: BossSnapshot, now: Date, lang: Language): RowView 
     upcoming: status.upcoming,
     dateISO,
     statusText,
+    approxYearsText,
   };
 }
 
@@ -76,11 +94,31 @@ export function detailLines(
     });
   }
   if (boss.current_start && boss.current_end) {
-    const label =
-      new Date(boss.current_start).getTime() > now.getTime()
-        ? t(lang, "next_window")
-        : t(lang, "current_window");
-    lines.push({ label, iso: boss.current_start, event: false, eventName: boss.current_event_name });
+    const startMs = new Date(boss.current_start).getTime();
+    const endMs = new Date(boss.current_end).getTime();
+    const nowMs = now.getTime();
+    if (startMs > nowMs) {
+      lines.push({
+        label: t(lang, "next_window"),
+        iso: boss.current_start,
+        event: false,
+        eventName: boss.current_event_name,
+      });
+    } else if (endMs > nowMs) {
+      lines.push({
+        label: t(lang, "current_window"),
+        iso: boss.current_start,
+        event: false,
+        eventName: boss.current_event_name,
+      });
+    } else {
+      lines.push({
+        label: t(lang, "last_window"),
+        iso: boss.current_end,
+        event: false,
+        eventName: boss.current_event_name,
+      });
+    }
   }
 
   return lines;

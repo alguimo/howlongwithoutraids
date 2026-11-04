@@ -10,7 +10,14 @@ import unicodedata
 from dataclasses import dataclass
 
 from raids.forms import match_pokeapi_form
-from raids.identity import Identity, UnmappableIdentity, resolve_identity
+from raids.identity import (
+    CANONICAL_DEFAULT_FORMS,
+    COSMETIC_MARKERS,
+    Identity,
+    UnmappableIdentity,
+    is_cosmetic_marker,
+    resolve_identity,
+)
 
 VARIANT_PREFIXES = (
     ("shadow", "SHADOW"),
@@ -155,6 +162,7 @@ class Resolved:
     is_legendary: bool | None = None
     is_mythical: bool | None = None
     is_baby: bool | None = None
+    name: str | None = None
 
 
 def parse_catalog(payload) -> list[CatalogEntry]:
@@ -242,13 +250,79 @@ def _catalog_form_identity(
     return None, "normal", "NORMAL"
 
 
+OFFICIAL_SPECIES_NAMES = {
+    "nidoran-f": "Nidoran♀",
+    "nidoran-m": "Nidoran♂",
+    "farfetchd": "Farfetch'd",
+    "mr-mime": "Mr. Mime",
+    "ho-oh": "Ho-Oh",
+    "mime-jr": "Mime Jr.",
+    "porygon-z": "Porygon-Z",
+    "flabebe": "Flabébé",
+    "type-null": "Type: Null",
+    "jangmo-o": "Jangmo-o",
+    "hakamo-o": "Hakamo-o",
+    "kommo-o": "Kommo-o",
+    "sirfetchd": "Sirfetch'd",
+    "mr-rime": "Mr. Rime",
+    "wo-chien": "Wo-Chien",
+    "chien-pao": "Chien-Pao",
+    "ting-lu": "Ting-Lu",
+    "chi-yu": "Chi-Yu",
+}
+
+
 def _catalog_display_name(form_name: str, species: dict) -> str:
-    base = form_name.split("-mega")[0]
-    for name in species:
-        if form_name == name or form_name.startswith(name + "-"):
-            base = name
-            break
+    if form_name in species:
+        base = form_name
+    else:
+        base = max(
+            (name for name in species if form_name.startswith(name + "-")),
+            key=len,
+            default=form_name.split("-mega")[0],
+        )
+    if base in OFFICIAL_SPECIES_NAMES:
+        return OFFICIAL_SPECIES_NAMES[base]
     return base.replace("-", " ").title()
+
+
+def _is_pure_cosmetic_prefix(prefix: str) -> bool:
+    remaining = prefix.strip().lower()
+    if not remaining:
+        return False
+    for marker in sorted(COSMETIC_MARKERS, key=len, reverse=True):
+        remaining = re.sub(
+            rf"(?<![a-z0-9]){re.escape(marker)}(?![a-z0-9])", " ", remaining
+        )
+    return re.sub(r"[\s-]+", "", remaining) == ""
+
+
+def canonical_species_name(
+    raw_name: object,
+    *,
+    catalog: "Catalog | None" = None,
+    dex_number: int | None = None,
+) -> str:
+    """Return the canonical English base species name without costumes or variants."""
+    if catalog is not None:
+        if dex_number is not None and hasattr(catalog, "entry_for_dex"):
+            by_dex = catalog.entry_for_dex(dex_number)
+            if by_dex is not None and by_dex.name:
+                return by_dex.name
+        resolved = catalog.resolve(raw_name)
+        if resolved is not None and resolved.name:
+            return resolved.name
+
+    base, variant, _ = parse_boss_name(raw_name)
+    if variant == "MEGA" and base.lower().endswith((" x", " y")):
+        base = base[:-2].strip()
+    words = base.split()
+    for split_at in range(len(words) - 1, 0, -1):
+        prefix = " ".join(words[:split_at])
+        remainder = " ".join(words[split_at:])
+        if remainder and _is_pure_cosmetic_prefix(prefix):
+            return remainder
+    return base
 
 
 def parse_boss_name(name) -> tuple[str, str, str]:
@@ -301,6 +375,8 @@ def form_variant_from_image(image) -> tuple[str | None, str | None]:
         code = match.group(1).upper()
         if code in IMAGE_VARIANT_CODES:
             return None, IMAGE_VARIANT_CODES[code]
+        if is_cosmetic_marker(code.replace("_", " ")):
+            return "normal", None
         return IMAGE_FORM_CODES.get(code, code.lower()), None
     return None, None
 
@@ -320,11 +396,33 @@ def identity_from_boss(name, image=None) -> Identity | None:
     return resolve_identity(dex_number, form, variant)
 
 
+def _entry_rank(entry: CatalogEntry) -> tuple[int, int]:
+    default_form = CANONICAL_DEFAULT_FORMS.get(entry.identity.dex_number, "normal")
+    return (
+        0 if entry.identity.variant == "NORMAL" else 1,
+        0 if entry.identity.form == default_form else 1,
+    )
+
+
 class Catalog:
     def __init__(self, entries):
         self._by_name: dict[str, CatalogEntry] = {}
+        self._by_identity: dict[Identity, CatalogEntry] = {}
+        self._by_dex: dict[int, CatalogEntry] = {}
         for entry in entries:
-            self._by_name.setdefault(normalize_name_key(entry.name), entry)
+            key = normalize_name_key(entry.name)
+            if key not in self._by_name or _entry_rank(entry) < _entry_rank(self._by_name[key]):
+                self._by_name[key] = entry
+            self._by_identity.setdefault(entry.identity, entry)
+            dex = entry.identity.dex_number
+            if dex not in self._by_dex or _entry_rank(entry) < _entry_rank(self._by_dex[dex]):
+                self._by_dex[dex] = entry
+
+    def entry_for_identity(self, identity: Identity) -> CatalogEntry | None:
+        return self._by_identity.get(identity)
+
+    def entry_for_dex(self, dex_number: int) -> CatalogEntry | None:
+        return self._by_dex.get(dex_number)
 
     @classmethod
     def from_conn(cls, conn) -> "Catalog":
@@ -333,6 +431,7 @@ class Catalog:
             SELECT dex_number, form, variant, name, types, sprite_url,
                    is_legendary, is_mythical, is_baby
             FROM pokemon
+            ORDER BY dex_number, form, variant
             """
         ).fetchall()
         entries = [
@@ -358,6 +457,17 @@ class Catalog:
         if entry is None and variant == "MEGA" and key.endswith(("-x", "-y")):
             entry = self._by_name.get(key[:-2])
         if entry is None:
+            words = base.split()
+            for split_at in range(1, len(words)):
+                prefix = " ".join(words[:split_at])
+                remainder = " ".join(words[split_at:])
+                if _is_pure_cosmetic_prefix(prefix):
+                    candidate = self._by_name.get(normalize_name_key(remainder))
+                    if candidate is not None:
+                        entry = candidate
+                        form = "normal"
+                        break
+        if entry is None:
             return None
 
         if form == "normal":
@@ -376,4 +486,5 @@ class Catalog:
             is_legendary=entry.is_legendary,
             is_mythical=entry.is_mythical,
             is_baby=entry.is_baby,
+            name=entry.name,
         )

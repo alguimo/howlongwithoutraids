@@ -84,8 +84,11 @@ def upsert_pokemon(
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (dex_number, form, variant) DO UPDATE
           SET name = EXCLUDED.name,
-              types = EXCLUDED.types,
-              sprite_url = EXCLUDED.sprite_url,
+              types = CASE
+                  WHEN cardinality(EXCLUDED.types) > 0 THEN EXCLUDED.types
+                  ELSE pokemon.types
+              END,
+              sprite_url = COALESCE(EXCLUDED.sprite_url, pokemon.sprite_url),
               {category_updates}is_ultra_beast = EXCLUDED.is_ultra_beast
         RETURNING id
         """,

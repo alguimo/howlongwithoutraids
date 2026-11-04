@@ -13,7 +13,7 @@ import psycopg
 
 from raids.identity import UnmappableIdentity
 from raids.log import log_omitted, log_source_failure
-from raids.pokedex import Catalog, identity_from_boss
+from raids.pokedex import Catalog, canonical_species_name, identity_from_boss
 from raids.sources.scrapedduck import (
     mark_windows,
     parse_events,
@@ -38,6 +38,7 @@ def run(conn, fetch_roster, fetch_events, *, now=None, logger=None) -> dict:
     except Exception as exc:
         log_source_failure(f"raids.json: {exc}", logger=logger)
 
+    initial_catalog = Catalog.from_conn(conn)
     tiers = _tier_by_name(roster)
     for entry in roster:
         try:
@@ -51,7 +52,9 @@ def run(conn, fetch_roster, fetch_events, *, now=None, logger=None) -> dict:
         upsert_pokemon(
             conn,
             identity,
-            name=entry.name,
+            name=canonical_species_name(
+                entry.name, catalog=initial_catalog, dex_number=identity.dex_number
+            ),
             types=entry.types,
             sprite_url=entry.sprite_url,
         )
@@ -79,9 +82,13 @@ def run(conn, fetch_roster, fetch_events, *, now=None, logger=None) -> dict:
         records.append(
             AppearanceRecord(
                 identity=resolved.identity,
-                name=appearance.boss_name,
+                name=canonical_species_name(
+                    appearance.boss_name,
+                    catalog=catalog,
+                    dex_number=resolved.identity.dex_number,
+                ),
                 types=resolved.types,
-                sprite_url=resolved.sprite_url,
+                sprite_url=None,
                 tier=tier,
                 start=appearance.start,
                 end=appearance.end,

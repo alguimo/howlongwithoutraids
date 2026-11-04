@@ -28,16 +28,24 @@ EVENT_PATTERNS = (
 )
 
 
+def _clean_match(raw: str, *, is_link: bool) -> str:
+    if not is_link:
+        return raw.strip()
+    parts = [segment.strip() for segment in raw.split("|") if segment.strip()]
+    return parts[-1] if parts else ""
+
+
 def extract_event_name(prose: str | None) -> str | None:
     """Return ``X`` only when exactly one closed pattern matches (RF-42)."""
     if not prose:
         return None
-    matches = [
-        match.group(1).strip()
-        for pattern in EVENT_PATTERNS
-        for match in pattern.finditer(prose)
-        if match.group(1).strip()
-    ]
+    matches = []
+    for pattern in EVENT_PATTERNS:
+        is_link = r"\]\]" in pattern.pattern
+        for match in pattern.finditer(prose):
+            cleaned = _clean_match(match.group(1), is_link=is_link)
+            if cleaned:
+                matches.append(cleaned)
     if len(matches) == 1:
         return matches[0]
     return None

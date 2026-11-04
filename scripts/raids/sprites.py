@@ -242,10 +242,23 @@ def audit_sprite_assignments(assignments) -> dict[str, list[dict]]:
     return {"assignments": results, "duplicates": duplicates}
 
 
+# Spec 005 RF-09: Zacian and Zamazenta's base identity is ``hero-of-many-battles``
+# while PokeAPI stores their base resource under plain ``zacian``/``zamazenta``
+# (``888.png``/``889.png``).
+DEFAULT_BASE_SPRITE_FORMS = frozenset({
+    (888, "hero-of-many-battles"),
+    (889, "hero-of-many-battles"),
+})
+
+
 def sprite_key(identity: Identity) -> str:
     """Nombre estable y derivado de la identidad. Cambia la cache del navegador."""
     key = str(identity.dex_number)
-    if identity.form and identity.form != "normal":
+    if (
+        identity.form
+        and identity.form != "normal"
+        and (identity.dex_number, identity.form) not in DEFAULT_BASE_SPRITE_FORMS
+    ):
         key += f"-{identity.form}"
     if identity.variant and identity.variant != "NORMAL":
         key += f"-{identity.variant.lower()}"
@@ -347,6 +360,8 @@ def build_index(catalog: dict) -> dict[tuple[int, str, str], int]:
             continue
         # Un mismo nombre puede repetirse; el primero gana.
         index.setdefault((dex, form, variant), form_id)
+        if dex in {888, 889} and form == "normal" and variant == "NORMAL":
+            index.setdefault((dex, "hero-of-many-battles", "NORMAL"), form_id)
     return index
 
 

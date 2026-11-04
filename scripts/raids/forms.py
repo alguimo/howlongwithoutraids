@@ -178,6 +178,8 @@ def explicit_pokeapi_form_name(
     if expanded:
         return expanded
     template = REGIONAL_FORM_NAMES.get(form)
+    if form == "hero-of-many-battles" and species in {"zacian", "zamazenta"}:
+        return (f"{species}-hero-of-many-battles", species)
     return (template.format(species=species),) if template else ()
 
 

@@ -715,18 +715,42 @@ def build_bulbapedia_records(downloaded, catalog, *, logger=None):
 
 def _consolidated_to_pages(consolidated, catalog):
     """Turn consolidated records into per-origin persistable pages."""
+    from raids.pokedex import canonical_species_name
+
     pages_to_store = []
     for item in consolidated.records:
         record = item.record
+        exact = (
+            catalog.entry_for_identity(record.identity)
+            if hasattr(catalog, "entry_for_identity")
+            else None
+        )
+        by_dex = (
+            catalog.entry_for_dex(record.identity.dex_number)
+            if hasattr(catalog, "entry_for_dex")
+            else None
+        )
         resolved = catalog.resolve(record.name)
+        types = (
+            exact.types
+            if exact is not None and exact.types
+            else by_dex.types
+            if by_dex is not None and by_dex.types
+            else resolved.types
+            if resolved is not None
+            else ()
+        )
+        species_name = canonical_species_name(
+            record.name, catalog=catalog, dex_number=record.identity.dex_number
+        )
         records = []
         for origin in item.origins:
             records.append(
                 AppearanceRecord(
                     identity=record.identity,
-                    name=record.name,
-                    types=resolved.types,
-                    sprite_url=resolved.sprite_url,
+                    name=species_name,
+                    types=types,
+                    sprite_url=None,
                     tier=record.tier,
                     start=record.start,
                     end=record.end,

@@ -59,11 +59,23 @@ COSMETIC_MARKERS = frozenset({
     "hat", "party", "holiday", "halloween", "new year", "safari", "varsity",
     "crown", "armored", "explorer", "bow", "cake", "flower", "fall",
     "sunglasses", "black", "white", "mischief", "trash", "festive", "stantler",
-    "cloak",
+    "cloak", "astronaut",
 })
 
 # Mega/Primal/Super Mega never live in ``form``: only their ``variant`` changes.
 VARIANT_MARKERS = {"mega": "MEGA", "primal": "PRIMAL"}
+
+# Spec 005 RF-09: closed table of species whose default GO form has its own
+# slug rather than ``normal``, so base appearances never split across two rows.
+CANONICAL_DEFAULT_FORMS: dict[int, str] = {
+    487: "altered",
+    641: "incarnate",
+    642: "incarnate",
+    645: "incarnate",
+    888: "hero-of-many-battles",
+    889: "hero-of-many-battles",
+    905: "incarnate",
+}
 
 
 class UnmappableIdentity(ValueError):
@@ -184,8 +196,12 @@ def normalize_dex_number(raw: object) -> int:
 
 
 def resolve_identity(dex_number: object, form: object, variant: object = "NORMAL") -> Identity:
+    dex = normalize_dex_number(dex_number)
+    normalized_form = normalize_form("" if form is None else str(form))
+    if normalized_form == "normal" and dex in CANONICAL_DEFAULT_FORMS:
+        normalized_form = CANONICAL_DEFAULT_FORMS[dex]
     return Identity(
-        dex_number=normalize_dex_number(dex_number),
-        form=normalize_form("" if form is None else str(form)),
+        dex_number=dex,
+        form=normalized_form,
         variant=normalize_variant(variant),
     )

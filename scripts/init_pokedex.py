@@ -15,7 +15,7 @@ from raids.pokedex import parse_catalog
 from raids.store import upsert_pokemon
 
 DEFAULT_DSN = os.environ.get("RAIDS_DSN", "postgresql://raids:raids@localhost:5433/raids")
-DEFAULT_CATALOG = Path(__file__).resolve().parent.parent / "db" / "seeds" / "pokedex.json"
+DEFAULT_CATALOG = Path(__file__).resolve().parent.parent / "db" / "seeds" / "pokeapi_catalog.json"
 
 
 def run(conn, fetch_catalog) -> int:

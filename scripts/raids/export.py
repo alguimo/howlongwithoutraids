@@ -172,19 +172,10 @@ def build_snapshot(conn, *, as_of: datetime) -> list[dict]:
     return snapshot
 
 
-def write_snapshot(path, rows, *, logger=None) -> bool:
-    if not rows:
-        (logger or get_logger()).warning("snapshot not written: no rows")
-        return False
-    # Keep this boundary safe for callers other than export_json.run too.  The
-    # temporary file prevents a failed validation/serialization from truncating
-    # the previous artifact.
-    from raids.validate import validate_snapshot
-
-    validate_snapshot(rows)
+def _atomic_write_json(path, data) -> None:
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    payload = json.dumps(rows, ensure_ascii=False, indent=2) + "\n"
+    payload = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
     fd, temporary = tempfile.mkstemp(prefix=f".{target.name}.", dir=target.parent)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as output:
@@ -198,4 +189,32 @@ def write_snapshot(path, rows, *, logger=None) -> bool:
         except FileNotFoundError:
             pass
         raise
+
+
+def build_snapshot_meta(as_of: datetime) -> dict[str, str]:
+    from raids.validate import InvalidSnapshot
+
+    if not isinstance(as_of, datetime) or as_of.tzinfo is None or as_of.utcoffset() is None:
+        raise InvalidSnapshot("as_of must include a timezone")
+    return {"exported_at": _iso(as_of)}
+
+
+def write_snapshot_meta(path, meta: dict) -> None:
+    from raids.validate import validate_snapshot_meta
+
+    validate_snapshot_meta(meta)
+    _atomic_write_json(path, meta)
+
+
+def write_snapshot(path, rows, *, logger=None) -> bool:
+    if not rows:
+        (logger or get_logger()).warning("snapshot not written: no rows")
+        return False
+    # Keep this boundary safe for callers other than export_json.run too.  The
+    # temporary file prevents a failed validation/serialization from truncating
+    # the previous artifact.
+    from raids.validate import validate_snapshot
+
+    validate_snapshot(rows)
+    _atomic_write_json(path, rows)
     return True

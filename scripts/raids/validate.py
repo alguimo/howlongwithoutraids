@@ -6,7 +6,7 @@ publicarse.
 """
 
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 REQUIRED_FIELDS = (
     "dex_number",
@@ -162,3 +162,29 @@ def validate_snapshot(rows) -> None:
                 f"row {index} last_end_date {row['last_end_date']!r} is not the latest"
                 " of the two varieties"
             )
+
+
+def validate_snapshot_meta(meta) -> None:
+    if not isinstance(meta, dict):
+        raise InvalidSnapshot("snapshot metadata must be an object")
+
+    for key, value in meta.items():
+        if isinstance(key, str) and "days" in key.lower():
+            raise InvalidSnapshot(f"snapshot metadata has a precomputed days field {key!r}")
+        if isinstance(value, str) and DAYS_TEXT.search(value):
+            raise InvalidSnapshot(f"snapshot metadata has precomputed days text in {key!r}")
+
+    if "exported_at" not in meta:
+        raise InvalidSnapshot("snapshot metadata is missing 'exported_at'")
+    extra = sorted(set(meta) - {"exported_at"})
+    if extra:
+        raise InvalidSnapshot(f"snapshot metadata has unknown fields: {extra}")
+
+    exported_at = meta["exported_at"]
+    if not isinstance(exported_at, str) or not exported_at.strip():
+        raise InvalidSnapshot("snapshot metadata 'exported_at' must be a non-empty string")
+    if not exported_at.endswith("Z"):
+        raise InvalidSnapshot("snapshot metadata 'exported_at' must use UTC Z suffix")
+    parsed = _parse(exported_at)
+    if parsed is None or parsed.utcoffset() != timedelta(0):
+        raise InvalidSnapshot("snapshot metadata 'exported_at' must be UTC")

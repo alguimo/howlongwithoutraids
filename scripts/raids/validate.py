@@ -6,7 +6,7 @@ publicarse.
 """
 
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 REQUIRED_FIELDS = (
     "dex_number",
@@ -55,7 +55,7 @@ class InvalidSnapshot(ValueError):
     """El snapshot incumple el contrato y no debe escribirse."""
 
 
-def _parse(value):
+def _parse(value, *, allow_floating_local: bool = False):
     if value is None:
         return None
     try:
@@ -63,6 +63,8 @@ def _parse(value):
     except (TypeError, ValueError) as exc:
         raise InvalidSnapshot(f"invalid ISO date {value!r}") from exc
     if parsed.tzinfo is None or parsed.utcoffset() is None:
+        if allow_floating_local and "T" in str(value):
+            return parsed.replace(tzinfo=timezone.utc)
         raise InvalidSnapshot(f"date {value!r} must include a timezone")
     return parsed
 
@@ -148,7 +150,12 @@ def validate_snapshot(rows) -> None:
             if isinstance(value, str) and DAYS_TEXT.search(value):
                 raise InvalidSnapshot(f"row {index} has precomputed days text in {key!r}")
 
-        dates = {field: _parse(row[field]) for field in DATE_FIELDS}
+        dates = {
+            field: _parse(
+                row[field], allow_floating_local=field in ("current_start", "current_end")
+            )
+            for field in DATE_FIELDS
+        }
         if (dates["current_start"] is None) != (dates["current_end"] is None):
             raise InvalidSnapshot(f"row {index} current window must have both dates or neither")
         if dates["current_start"] is not None and dates["current_start"] > dates["current_end"]:

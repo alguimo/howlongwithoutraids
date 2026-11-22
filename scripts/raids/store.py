@@ -28,6 +28,7 @@ class AppearanceRecord:
     end: datetime
     source: str
     is_special_event: bool = False
+    is_local_time: bool = False
     page_title: str | None = None
     page_kind: str | None = None
     event_name: str | None = None
@@ -123,6 +124,7 @@ def record_appearance(
     end: datetime,
     source: str,
     is_special_event: bool = False,
+    is_local_time: bool = False,
     published_at: datetime | None = None,
     page_title: str | None = None,
     page_kind: str | None = None,
@@ -196,11 +198,12 @@ def record_appearance(
                 start_date = %s,
                 end_date = %s,
                 is_special_event = %s,
+                is_local_time = %s,
                 event_name = %s,
                 published_at = COALESCE(%s, now())
             WHERE id = %s
             """,
-            (tier, start, end, is_special_event, event_name, published_at, keep_id),
+            (tier, start, end, is_special_event, is_local_time, event_name, published_at, keep_id),
         )
         extra_ids = [row[0] for row in overlapping[1:]]
         if extra_ids:
@@ -234,11 +237,11 @@ def record_appearance(
     appearance_id = conn.execute(
         """
         INSERT INTO raid_appearances
-            (pokemon_id, tier, start_date, end_date, is_special_event, source, event_name, published_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, COALESCE(%s, now()))
+            (pokemon_id, tier, start_date, end_date, is_special_event, is_local_time, source, event_name, published_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, COALESCE(%s, now()))
         RETURNING id
         """,
-        (pokemon_id, tier, start, end, is_special_event, source, event_name, published_at),
+        (pokemon_id, tier, start, end, is_special_event, is_local_time, source, event_name, published_at),
     ).fetchone()[0]
     _record_origins(conn, appearance_id, origins)
     return "inserted"
@@ -300,6 +303,7 @@ def _store_records(
             end=record.end,
             source=record.source,
             is_special_event=record.is_special_event,
+            is_local_time=record.is_local_time,
             page_title=record.page_title,
             page_kind=record.page_kind,
             event_name=record.event_name,

@@ -1,5 +1,6 @@
 ---
 import { footerUpdatedText } from "../lib/html";
+import { t } from "../lib/i18n";
 
 interface Props {
   exportedAt: string | null;
@@ -9,16 +10,28 @@ const { exportedAt } = Astro.props;
 const updated = footerUpdatedText(exportedAt, "en");
 ---
 
-<footer class="app-footer mt-auto pt-3 text-xs sm:text-sm">
-  <span data-i18n="footer_data">Data from</span>
-  <a class="underline underline-offset-4" href="https://leekduck.com" rel="noopener">LeekDuck</a>
-  <span aria-hidden="true">·</span>
-  <a
-    class="underline underline-offset-4"
-    href="https://github.com/bigfoott/ScrapedDuck"
-    rel="noopener">ScrapedDuck</a>
-  <span data-footer-updated-wrap hidden={updated === null}>
+<footer class="app-footer mt-auto space-y-1.5 pt-3 text-xs sm:text-sm">
+  <p>
+    <span data-i18n="footer_data">Data from</span>
+    <a class="underline underline-offset-4" href="https://leekduck.com" rel="noopener">LeekDuck</a>
     <span aria-hidden="true">·</span>
-    <span data-footer-updated>{updated ?? ""}</span>
-  </span>
+    <a
+      class="underline underline-offset-4"
+      href="https://github.com/bigfoott/ScrapedDuck"
+      rel="noopener">ScrapedDuck</a>
+    <span aria-hidden="true">·</span>
+    <a class="underline underline-offset-4" href="https://pokeapi.co" rel="noopener">PokéAPI</a>
+    <span aria-hidden="true">·</span>
+    <a
+      class="underline underline-offset-4"
+      href="https://pokemongo.fandom.com"
+      rel="noopener">Pokémon GO Wiki</a>
+    <span data-footer-updated-wrap hidden={updated === null}>
+      <span aria-hidden="true">·</span>
+      <span data-footer-updated>{updated ?? ""}</span>
+    </span>
+  </p>
+  <p class="text-[11px] leading-relaxed opacity-85" data-i18n="footer_disclaimer">
+    {t("en", "footer_disclaimer")}
+  </p>
 </footer>

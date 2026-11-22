@@ -13,12 +13,19 @@ export interface LanguageStorage {
 }
 
 export function resolveInitialLanguage(
-  navigatorLanguage: string | undefined | null,
+  navigatorLanguage: string | readonly string[] | undefined | null,
   stored: string | null | undefined,
 ): Language {
   if (isLanguage(stored)) return stored;
-  const base = (navigatorLanguage ?? "").slice(0, 2).toLowerCase();
-  if (isLanguage(base)) return base;
+  const candidates = Array.isArray(navigatorLanguage)
+    ? navigatorLanguage
+    : navigatorLanguage
+      ? [navigatorLanguage]
+      : [];
+  for (const entry of candidates) {
+    const base = String(entry).slice(0, 2).toLowerCase();
+    if (isLanguage(base)) return base;
+  }
   return "en";
 }
 

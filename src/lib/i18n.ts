@@ -92,6 +92,7 @@ export const CATALOGS: Record<Language, Record<string, string>> = {
     after_days: "After {n} days",
     debut_badge: "Debut",
     no_upcoming: "No upcoming raids announced yet.",
+    footer_disclaimer: "Unofficial, non-commercial fan project. Pokémon and Pokémon GO are trademarks of Nintendo, Creatures Inc., GAME FREAK Inc., and Niantic, Inc.",
   },
   es: {
     title: "How Long Without Raids",
@@ -179,6 +180,7 @@ export const CATALOGS: Record<Language, Record<string, string>> = {
     after_days: "Tras {n} días",
     debut_badge: "Debut",
     no_upcoming: "Aún no hay próximas raids anunciadas.",
+    footer_disclaimer: "Proyecto fan no oficial y sin ánimo de lucro. Pokémon y Pokémon GO son marcas registradas de Nintendo, Creatures Inc., GAME FREAK Inc. y Niantic, Inc.",
   },
   fr: {
     title: "How Long Without Raids",
@@ -266,6 +268,7 @@ export const CATALOGS: Record<Language, Record<string, string>> = {
     after_days: "Après {n} jours",
     debut_badge: "Début",
     no_upcoming: "Aucun raid à venir annoncé pour l'instant.",
+    footer_disclaimer: "Projet fan non officiel et non commercial. Pokémon et Pokémon GO sont des marques déposées de Nintendo, Creatures Inc., GAME FREAK Inc. et Niantic, Inc.",
   },
 };
 

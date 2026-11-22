@@ -8,7 +8,7 @@ reproducible y no quede atado al reloj de la base.
 import json
 import os
 import tempfile
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from raids.intervals import Window, merge_windows
@@ -20,10 +20,13 @@ TIER_PRECEDENCE = (
 )
 _TIER_RANK = {tier: rank for rank, tier in enumerate(TIER_PRECEDENCE)}
 
-def _iso(value: datetime | None) -> str | None:
+def _iso(value: datetime | None, *, local_time: bool = False) -> str | None:
     if value is None:
         return None
-    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    utc = value.astimezone(timezone.utc)
+    if local_time:
+        return utc.replace(tzinfo=None).isoformat(timespec="seconds")
+    return utc.isoformat().replace("+00:00", "Z")
 
 
 def _max_datetime(values):
@@ -96,8 +99,21 @@ def _current_event_name(appearances, current, as_of):
     return name if isinstance(name, str) and name else None
 
 
+_LOCAL_TZ_MARGIN = timedelta(hours=14)
+
+
+def _is_active_at(appearance, as_of: datetime) -> bool:
+    if appearance.get("is_local_time"):
+        return (
+            appearance["start_date"] - _LOCAL_TZ_MARGIN
+            <= as_of
+            < appearance["end_date"] + _LOCAL_TZ_MARGIN
+        )
+    return appearance["start_date"] <= as_of < appearance["end_date"]
+
+
 def _row(pokemon, appearances, as_of):
-    active = [a for a in appearances if a["start_date"] <= as_of < a["end_date"]]
+    active = [a for a in appearances if _is_active_at(a, as_of)]
     if active:
         current = max(active, key=lambda a: (a["start_date"], a["end_date"]))
     else:
@@ -116,6 +132,7 @@ def _row(pokemon, appearances, as_of):
     )
     last_end = _max_datetime([regular_end, special_end])
 
+    current_is_local = bool(current and current.get("is_local_time"))
     return {
         "dex_number": pokemon["dex_number"],
         "form": pokemon["form"],
@@ -127,8 +144,12 @@ def _row(pokemon, appearances, as_of):
         "is_ultra_beast": bool(pokemon["is_ultra_beast"]),
         "types": list(pokemon["types"]),
         "sprite_url": pokemon["sprite_url"],
-        "current_start": _iso(current["start_date"] if current else None),
-        "current_end": _iso(current["end_date"] if current else None),
+        "current_start": _iso(
+            current["start_date"] if current else None, local_time=current_is_local
+        ),
+        "current_end": _iso(
+            current["end_date"] if current else None, local_time=current_is_local
+        ),
         "last_regular_end_date": _iso(regular_end),
         "last_regular_event_name": _event_name_for(
             appearances, special=False, end=regular_end
@@ -154,7 +175,7 @@ def build_snapshot(conn, *, as_of: datetime) -> list[dict]:
     appearance_rows = _select(
         conn,
         "SELECT pokemon_id, tier, start_date, end_date, is_special_event,"
-        " event_name FROM raid_appearances",
+        " is_local_time, event_name FROM raid_appearances",
     )
 
     by_pokemon: dict[int, list] = {}

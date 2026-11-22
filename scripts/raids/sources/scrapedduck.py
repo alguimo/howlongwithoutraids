@@ -12,7 +12,7 @@ from typing import Any, Iterable
 
 from raids.intervals import Window, is_short_event, overlaps
 from raids.log import log_omitted
-from raids.time import to_utc
+from raids.time import is_floating_local, to_local_wall_utc, to_utc
 
 RAID_BATTLES = "raid-battles"
 
@@ -78,6 +78,7 @@ class BossWindow:
     start: datetime
     end: datetime
     event_name: str | None = None
+    is_local_time: bool = False
 
 
 @dataclass(frozen=True)
@@ -87,6 +88,7 @@ class ShortEvent:
     name: str
     start: datetime
     end: datetime
+    is_local_time: bool = False
 
 
 @dataclass(frozen=True)
@@ -103,6 +105,20 @@ class BossAppearance:
     is_special_event: bool
     event_name: str | None = None
     event_id: str = ""
+    is_local_time: bool = False
+
+
+def _parse_event_bound(
+    value: Any, *, normalize_rotation_start: bool = False
+) -> tuple[datetime, bool]:
+    if is_floating_local(value):
+        return (
+            to_local_wall_utc(
+                value, normalize_rotation_start=normalize_rotation_start
+            ),
+            True,
+        )
+    return to_utc(value), False
 
 
 def normalize_raid_windows(payload: Any, now: datetime) -> ParsedEvents:
@@ -139,11 +155,14 @@ def normalize_raid_windows(payload: Any, now: datetime) -> ParsedEvents:
                 log_omitted("missing start", event_id=event_id)
                 continue
             try:
-                start = to_utc(start_value)
+                start, local_start = _parse_event_bound(
+                    start_value, normalize_rotation_start=True
+                )
             except (TypeError, ValueError):
                 log_omitted("invalid start", event_id=event_id)
                 continue
 
+            local_end = local_start
             if end_value is None:
                 later_starts = [candidate for candidate in known_starts if candidate > start]
                 end = derive_past_end(start, later_starts, now)
@@ -152,7 +171,7 @@ def normalize_raid_windows(payload: Any, now: datetime) -> ParsedEvents:
                     continue
             else:
                 try:
-                    end = to_utc(end_value)
+                    end, local_end = _parse_event_bound(end_value)
                 except (TypeError, ValueError):
                     log_omitted("invalid end", event_id=event_id)
                     continue
@@ -161,9 +180,10 @@ def normalize_raid_windows(payload: Any, now: datetime) -> ParsedEvents:
                 log_omitted("invalid window", event_id=event_id)
                 continue
             event_name = _clean_event_name(event.get("name"))
+            is_local = local_start and local_end
             for boss_name in _event_bosses(event):
                 windows.append(
-                    BossWindow(event_id, boss_name, start, end, event_name)
+                    BossWindow(event_id, boss_name, start, end, event_name, is_local)
                 )
         elif kind and is_short_event(kind):
             if start_value is None:
@@ -173,8 +193,8 @@ def normalize_raid_windows(payload: Any, now: datetime) -> ParsedEvents:
                 log_omitted("missing end", event_id=event_id)
                 continue
             try:
-                start = to_utc(start_value)
-                end = to_utc(end_value)
+                start, local_start = _parse_event_bound(start_value)
+                end, local_end = _parse_event_bound(end_value)
             except (TypeError, ValueError):
                 log_omitted("invalid window", event_id=event_id)
                 continue
@@ -188,6 +208,7 @@ def normalize_raid_windows(payload: Any, now: datetime) -> ParsedEvents:
                     str(event.get("name", "")),
                     start,
                     end,
+                    local_start and local_end,
                 )
             )
     return ParsedEvents(tuple(windows), tuple(short_events))
@@ -323,26 +344,34 @@ def parse_events(payload: Any, *, now: datetime | None = None) -> ParsedEvents:
             if start is None or end is None:
                 continue
             event_name = _clean_event_name(event.get("name"))
+            parsed_start, local_start = _parse_event_bound(
+                start, normalize_rotation_start=True
+            )
+            parsed_end, local_end = _parse_event_bound(end)
             for boss_name in _event_bosses(event):
                 windows.append(
                     BossWindow(
                         event_id=event_id,
                         boss_name=boss_name,
-                        start=to_utc(start),
-                        end=to_utc(end),
+                        start=parsed_start,
+                        end=parsed_end,
                         event_name=event_name,
+                        is_local_time=local_start and local_end,
                     )
                 )
         elif kind and is_short_event(kind):
             if start is None or end is None:
                 continue
+            parsed_start, local_start = _parse_event_bound(start)
+            parsed_end, local_end = _parse_event_bound(end)
             short_events.append(
                 ShortEvent(
                     event_id=event_id,
                     kind=str(kind),
                     name=str(event.get("name", "")),
-                    start=to_utc(start),
-                    end=to_utc(end),
+                    start=parsed_start,
+                    end=parsed_end,
+                    is_local_time=local_start and local_end,
                 )
             )
     return ParsedEvents(tuple(windows), tuple(short_events))
@@ -413,6 +442,7 @@ def mark_windows(
                 matched is not None,
                 event_name=event_name,
                 event_id=window.event_id,
+                is_local_time=window.is_local_time,
             )
         )
     for event in shorts:
@@ -429,6 +459,7 @@ def mark_windows(
                 is_special_event=True,
                 event_name=_clean_event_name(event.name),
                 event_id=event.event_id,
+                is_local_time=event.is_local_time,
             )
         )
     return appearances

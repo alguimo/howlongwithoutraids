@@ -55,6 +55,7 @@ CREATE TABLE raid_appearances (
   start_date timestamptz NOT NULL,
   end_date timestamptz NOT NULL,
   is_special_event boolean NOT NULL DEFAULT false,
+  is_local_time boolean NOT NULL DEFAULT false,
   source raid_source NOT NULL,
   -- Raw event name of this appearance, populated by the pipeline sources
   -- (Fandom prose, Bulbapedia section heading, ScrapedDuck field). The

@@ -2,6 +2,7 @@ import { calendarDaysBetween, effectiveLastEndDate } from "./counter";
 import { baseName, displayName } from "./display";
 import { eggSvg, tierBadgeStyles, tierToEggType } from "./eggs";
 import {
+  assetUrl,
   droughtSeverityClass,
   escapeHtml,
   formatDate,
@@ -89,7 +90,7 @@ export function upcomingTableHtml(
       const fallback = (hidden: boolean) =>
         `<span role="img" aria-label="${escapeHtml(name)}" class="${hidden ? "hidden " : ""}boss-initials flex h-9 w-9 items-center justify-center rounded-lg text-xs font-semibold">${escapeHtml(initials(baseName(boss, lang)))}</span>`;
       const avatar = boss.sprite_url
-        ? `<img src="${escapeHtml(boss.sprite_url)}" alt="${escapeHtml(name)}" width="36" height="36" decoding="async" onerror="this.classList.add('hidden');this.nextElementSibling?.classList.remove('hidden')" class="boss-sprite h-9 w-9 object-contain" />${fallback(true)}`
+        ? `<img src="${escapeHtml(assetUrl(boss.sprite_url))}" alt="${escapeHtml(name)}" width="36" height="36" decoding="async" onerror="this.classList.add('hidden');this.nextElementSibling?.classList.remove('hidden')" class="boss-sprite h-9 w-9 object-contain" />${fallback(true)}`
         : fallback(false);
 
       const startISO = boss.current_start!;

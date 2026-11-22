@@ -32,10 +32,19 @@ export function droughtSeverityClass(days: number): string {
   return "drought-mild";
 }
 
+const HAS_TZ = /(?:[zZ]|[+-]\d{2}:?\d{2})$/;
+
+export function assetUrl(path: string): string {
+  if (!path.startsWith("/")) return path;
+  const base = (import.meta.env?.BASE_URL ?? "/").replace(/\/?$/, "/");
+  return base === "/" ? path : `${base}${path.slice(1)}`;
+}
+
 export function formatDate(iso: string, lang: Language): string {
-  return new Intl.DateTimeFormat(lang, { dateStyle: "medium", timeZone: "UTC" }).format(
-    new Date(iso),
-  );
+  const options: Intl.DateTimeFormatOptions = HAS_TZ.test(iso.trim())
+    ? { dateStyle: "medium", timeZone: "UTC" }
+    : { dateStyle: "medium" };
+  return new Intl.DateTimeFormat(lang, options).format(new Date(iso));
 }
 
 export function footerUpdatedText(exportedAt: string | null, lang: Language): string | null {
@@ -113,7 +122,7 @@ export function rowHtml(boss: BossSnapshot, now: Date, lang: Language): string {
     `<span role="img" aria-label="${escapeHtml(view.name)}" class="${hidden ? "hidden " : ""}boss-initials flex h-9 w-9 items-center justify-center rounded-lg text-xs font-semibold">${escapeHtml(initials(baseName(boss, lang)))}</span>`;
 
   const avatar = boss.sprite_url
-    ? `<img src="${escapeHtml(boss.sprite_url)}" alt="${escapeHtml(view.name)}" width="36" height="36" decoding="async" onerror="this.classList.add('hidden');this.nextElementSibling?.classList.remove('hidden')" class="boss-sprite h-9 w-9 object-contain" />${initialsFallback(true)}`
+    ? `<img src="${escapeHtml(assetUrl(boss.sprite_url))}" alt="${escapeHtml(view.name)}" width="36" height="36" decoding="async" onerror="this.classList.add('hidden');this.nextElementSibling?.classList.remove('hidden')" class="boss-sprite h-9 w-9 object-contain" />${initialsFallback(true)}`
     : initialsFallback(false);
 
   let statusContent: string;

@@ -83,7 +83,10 @@ export function start(): void {
   if (sortEl) sortEl.value = sort;
 
   let totalPages = 1;
-  let lang: Language = resolveInitialLanguage(navigator.language, readStorage(STORAGE_KEY));
+  let lang: Language = resolveInitialLanguage(
+    navigator.languages?.length ? navigator.languages : navigator.language,
+    readStorage(STORAGE_KEY),
+  );
   const themeHandle = mountThemeController(lang);
 
   let cachedTheadHeight = 32;

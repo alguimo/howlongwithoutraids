@@ -1,0 +1,119 @@
+name: Update raids data and deploy to GitHub Pages
+
+on:
+  schedule:
+    # Daily at 06:00 UTC to pick up new rotations and upcoming raid announcements
+    - cron: "0 6 * * *"
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages-deploy"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: raids
+          POSTGRES_PASSWORD: raids
+          POSTGRES_DB: raids
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      RAIDS_DSN: postgresql://raids:raids@localhost:5433/raids
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Python ETL dependencies
+        run: pip install -e ./scripts
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Cache downloaded sprites
+        uses: actions/cache@v4
+        with:
+          path: public/sprites
+          key: sprites-${{ runner.os }}-v1
+
+      - name: Restore database state from data-state release (or bootstrap)
+        run: |
+          if gh release download data-state -p raids-db.sql.gz -O /tmp/raids-db.sql.gz 2>/dev/null; then
+            echo "Restoring persisted database dump..."
+            gunzip -c /tmp/raids-db.sql.gz | psql "$RAIDS_DSN" -v ON_ERROR_STOP=1 >/dev/null
+            psql "$RAIDS_DSN" -c "ALTER TABLE raid_appearances ADD COLUMN IF NOT EXISTS is_local_time boolean NOT NULL DEFAULT false;"
+          else
+            echo "No persisted data-state release found; bootstrapping schema, pokedex, and full history..."
+            psql "$RAIDS_DSN" -v ON_ERROR_STOP=1 -f db/schema.sql
+            python scripts/init_pokedex.py
+            python scripts/backfill_history.py
+          fi
+
+      - name: Sync weekly and upcoming raids from ScrapedDuck
+        run: python scripts/sync_weekly.py
+
+      - name: Fetch missing sprites locally
+        run: python scripts/fetch_sprites.py
+
+      - name: Export validated static snapshot
+        run: python scripts/export_json.py
+
+      - name: Persist updated database dump to data-state release
+        run: |
+          pg_dump "$RAIDS_DSN" --no-owner --no-privileges | gzip -9 > /tmp/raids-db.sql.gz
+          if gh release view data-state >/dev/null 2>&1; then
+            gh release upload data-state /tmp/raids-db.sql.gz --clobber
+          else
+            gh release create data-state /tmp/raids-db.sql.gz \
+              --title "Automated Raid Database State" \
+              --notes "Persistent PostgreSQL dump updated automatically by GitHub Actions."
+          fi
+
+      - name: Build static Astro site
+        run: npm run build
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -98,6 +98,7 @@ def run(conn, fetch_roster, fetch_events, *, now=None, logger=None) -> dict:
                 source="scrapedduck",
                 is_special_event=appearance.is_special_event,
                 event_name=appearance.event_name,
+                is_local_time=appearance.is_local_time,
             )
         )
 

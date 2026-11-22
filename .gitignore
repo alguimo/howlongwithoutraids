@@ -9,4 +9,3 @@ dist/
 src/data/raids-snapshot.json
 src/data/snapshot-meta.json
 public/sprites/
-db/seeds/pokeapi_catalog.json

@@ -87,7 +87,7 @@ jobs:
         run: python scripts/sync_weekly.py
 
       - name: Fetch missing sprites locally
-        run: python scripts/fetch_sprites.py
+        run: python scripts/fetch_sprites.py --delay 0.05
 
       - name: Export validated static snapshot
         run: python scripts/export_json.py

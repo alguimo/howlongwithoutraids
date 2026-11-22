@@ -5,6 +5,7 @@ import Footer from "../components/Footer.astro";
 import LanguageSelector from "../components/LanguageSelector.astro";
 import SearchBox from "../components/SearchBox.astro";
 import ThemeToggle from "../components/ThemeToggle.astro";
+import ViewTabs from "../components/ViewTabs.astro";
 import "../styles/global.css";
 import data from "../data/raids-snapshot.json";
 import metaData from "../data/snapshot-meta.json";
@@ -14,11 +15,14 @@ import { t } from "../lib/i18n";
 import { sortBosses } from "../lib/order";
 import { pageSlice, pageState } from "../lib/pagination";
 import { parseSnapshot, parseSnapshotMeta } from "../lib/snapshot";
+import { upcomingBosses, upcomingTableHtml } from "../lib/upcoming";
 
 const bosses = parseSnapshot(data);
 const meta = parseSnapshotMeta(metaData);
 const now = new Date();
 const activeBossesCount = bosses.filter((b) => isActive(b, now)).length;
+const initialUpcoming = upcomingBosses(bosses, now, "en");
+const initialUpcomingHtml = upcomingTableHtml(initialUpcoming, now, "en");
 
 // El build pinta la primera página compacta (12 filas); en escritorio el cliente
 // ajusta dinámicamente el tamaño de página al alto libre del viewport (Spec 010 RF-09).
@@ -86,15 +90,26 @@ const rows = listHtml(pageSlice(sortBosses(bosses, now, "en"), 1), now, "en");
       </div>
     </header>
     <main class="mx-auto max-w-5xl px-4 py-3 sm:px-6 sm:py-4">
-      <FilterBar />
-      <EmptyState />
-      <div id="table-wrap" class="mt-1 overflow-x-auto">
-        <table class="w-full border-collapse">
-          <thead id="boss-head" set:html={tableHeadHtml("en")}></thead>
-          <tbody id="boss-list" set:html={rows}></tbody>
-        </table>
-      </div>
-      <div class="pb-3" set:html={paginationHtml(initialState, "en")}></div>
+      <ViewTabs upcomingCount={initialUpcoming.length} />
+      <section id="history-panel" role="tabpanel" aria-labelledby="tab-history">
+        <FilterBar />
+        <EmptyState />
+        <div id="table-wrap" class="mt-1 overflow-x-auto">
+          <table class="w-full border-collapse">
+            <thead id="boss-head" set:html={tableHeadHtml("en")}></thead>
+            <tbody id="boss-list" set:html={rows}></tbody>
+          </table>
+        </div>
+        <div class="pb-3" set:html={paginationHtml(initialState, "en")}></div>
+      </section>
+      <section
+        id="upcoming-panel"
+        role="tabpanel"
+        aria-labelledby="tab-upcoming"
+        hidden
+        class="pb-3"
+        set:html={initialUpcomingHtml}
+      ></section>
       <Footer exportedAt={meta.exported_at} />
     </main>
     <script>

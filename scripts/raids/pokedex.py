@@ -9,7 +9,7 @@ import re
 import unicodedata
 from dataclasses import dataclass
 
-from raids.forms import match_pokeapi_form
+from raids.forms import match_pokeapi_form, resolve_expanded_form
 from raids.identity import (
     CANONICAL_DEFAULT_FORMS,
     COSMETIC_MARKERS,
@@ -348,9 +348,14 @@ def parse_boss_name(name) -> tuple[str, str, str]:
     match = _PARENTHETICAL.search(text)
     if match:
         key = match.group(1).strip().lower()
+        base = text[: match.start()].strip()
         if key in PARENTHETICAL_FORMS:
             form = PARENTHETICAL_FORMS[key]
-        text = text[: match.start()].strip()
+        else:
+            expanded = resolve_expanded_form(f"{base.lower()} {key}") or resolve_expanded_form(key)
+            if expanded is not None:
+                form = expanded
+        text = base
 
     return text.strip(), variant, form
 

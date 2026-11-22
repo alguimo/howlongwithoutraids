@@ -1,0 +1,42 @@
+---
+import { t } from "../lib/i18n";
+
+interface Props {
+  upcomingCount: number;
+}
+
+const { upcomingCount } = Astro.props;
+---
+
+<div
+  role="tablist"
+  aria-label={t("en", "view_tabs_label")}
+  data-i18n-aria-label="view_tabs_label"
+  class="view-tabs mb-3 flex items-center gap-5"
+>
+  <button
+    type="button"
+    role="tab"
+    id="tab-history"
+    data-view-tab="history"
+    aria-selected="true"
+    aria-controls="history-panel"
+    class="view-tab pb-2 text-sm font-medium outline-none transition-colors"
+  >
+    <span data-i18n="tab_history">{t("en", "tab_history")}</span>
+  </button>
+  <button
+    type="button"
+    role="tab"
+    id="tab-upcoming"
+    data-view-tab="upcoming"
+    aria-selected="false"
+    aria-controls="upcoming-panel"
+    class="view-tab inline-flex items-center gap-1.5 pb-2 text-sm font-medium outline-none transition-colors"
+  >
+    <span data-i18n="tab_upcoming">{t("en", "tab_upcoming")}</span>
+    <span data-upcoming-count class="view-tab-count rounded-full px-1.5 py-0.5 text-[11px] leading-none tabular-nums">
+      {upcomingCount}
+    </span>
+  </button>
+</div>

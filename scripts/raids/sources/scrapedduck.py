@@ -7,6 +7,7 @@ actual (identidad, tier, tipos, sprite), sin fechas.
 
 from dataclasses import dataclass
 from datetime import datetime
+import re
 from typing import Any, Iterable
 
 from raids.intervals import Window, is_short_event, overlaps
@@ -22,9 +23,41 @@ TIER_LABELS = {
     "5-star raids": "5",
     "mega raids": "MEGA",
     "mega legendary raids": "MEGA_LEGENDARY",
+    "super mega raids": "SUPER_MEGA",
     "primal raids": "PRIMAL",
     "elite raids": "ELITE",
 }
+
+_EVENT_TIER_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\bsuper\s+mega\s+raids?\b", re.IGNORECASE), "SUPER_MEGA"),
+    (re.compile(r"\bmega\s+legendary\s+raids?\b", re.IGNORECASE), "MEGA_LEGENDARY"),
+    (re.compile(r"\bmega\s+raids?\b", re.IGNORECASE), "MEGA"),
+    (re.compile(r"\bprimal\s+raids?\b", re.IGNORECASE), "PRIMAL"),
+    (re.compile(r"\belite\s+raids?\b", re.IGNORECASE), "ELITE"),
+)
+_STAR_EVENT_TIER_RE = re.compile(
+    r"\b([1-5])-star\s+raid(?:s|\s+battles?)\b", re.IGNORECASE
+)
+_SHADOW_PREFIX_RE = re.compile(r"^shadow\s+", re.IGNORECASE)
+_IN_SHADOW_RAIDS_RE = re.compile(r"\bin\s+shadow\s+raids?\b", re.IGNORECASE)
+_IN_CLAUSE_RE = re.compile(r"\s+in\s+", re.IGNORECASE)
+
+
+def tier_from_event_name(name: str | None) -> str | None:
+    """Extract an explicit raid tier declared in an event title.
+
+    Returns ``None`` for generic event titles or indeterminate Shadow Raids
+    that do not specify a star level (Principle 13).
+    """
+    if not name:
+        return None
+    for pattern, tier in _EVENT_TIER_PATTERNS:
+        if pattern.search(name):
+            return tier
+    star_match = _STAR_EVENT_TIER_RE.search(name)
+    if star_match:
+        return star_match.group(1)
+    return None
 
 class InvalidSourcePayload(ValueError):
     """El cuerpo de la fuente no tiene la forma esperada."""
@@ -204,10 +237,14 @@ def parse_raids(payload: Any) -> list[RosterEntry]:
         types = entry.get("types") or []
         if not isinstance(types, list):
             raise InvalidSourcePayload("roster entry 'types' must be a list")
+        raw_name = str(entry["name"])
+        tier = normalize_tier(entry.get("tier"))
+        if tier in {"1", "3", "5"} and _SHADOW_PREFIX_RE.match(raw_name.strip()):
+            tier = f"SHADOW_{tier}"
         roster.append(
             RosterEntry(
-                name=str(entry["name"]),
-                tier=normalize_tier(entry.get("tier")),
+                name=raw_name,
+                tier=tier,
                 types=tuple(
                     str(item["name"])
                     for item in types
@@ -226,14 +263,42 @@ def _clean_event_name(value: Any) -> str | None:
     return cleaned or None
 
 
+def _ensure_shadow_prefix(name: str, is_shadow_event: bool) -> str:
+    cleaned = name.strip()
+    if is_shadow_event and cleaned and not _SHADOW_PREFIX_RE.match(cleaned):
+        return f"Shadow {cleaned}"
+    return cleaned
+
+
+def _bosses_from_event_title(event_name: str | None) -> list[str]:
+    if not event_name or not _IN_CLAUSE_RE.search(event_name):
+        return []
+    prefix = _IN_CLAUSE_RE.split(event_name, maxsplit=1)[0].strip()
+    if not prefix or "(" in prefix:
+        return [prefix] if prefix else []
+    parts = [part.strip() for part in re.split(r",\s+and\s+|\s+and\s+|,\s*", prefix)]
+    return [part for part in parts if part]
+
+
 def _event_bosses(event: dict) -> list[str]:
+    event_name = _clean_event_name(event.get("name"))
+    is_shadow_event = bool(
+        event_name
+        and (_SHADOW_PREFIX_RE.match(event_name) or _IN_SHADOW_RAIDS_RE.search(event_name))
+    )
     extra = event.get("extraData") or {}
     raidbattles = extra.get("raidbattles") or {}
     bosses = raidbattles.get("bosses") or []
-    return [
-        str(boss["name"])
+    explicit = [
+        _ensure_shadow_prefix(str(boss["name"]), is_shadow_event)
         for boss in bosses
         if isinstance(boss, dict) and "name" in boss
+    ]
+    if explicit:
+        return explicit
+    return [
+        _ensure_shadow_prefix(name, is_shadow_event)
+        for name in _bosses_from_event_title(event_name)
     ]
 
 
@@ -285,9 +350,19 @@ def parse_events(payload: Any, *, now: datetime | None = None) -> ParsedEvents:
 
 def short_event_boss(event: ShortEvent) -> str:
     name = event.name.strip()
-    for suffix in ("Raid Hour", "Raid Day"):
+    for suffix, is_mega in (
+        ("Super Mega Raid Day", True),
+        ("Mega Raid Day", True),
+        ("Raid Day", False),
+        ("Raid Hour", False),
+    ):
         if name.lower().endswith(suffix.lower()):
-            return name[: -len(suffix)].strip()
+            boss = name[: -len(suffix)].strip()
+            if not boss:
+                return ""
+            if is_mega and not boss.lower().startswith("mega "):
+                return f"Mega {boss}"
+            return boss
     return name
 
 
@@ -316,13 +391,17 @@ def mark_windows(
     names the appearance that fixes that date. The model keeps one ``event_name``
     per appearance, so a window marked as special stores the short event's
     ``name`` (Raid Hour/Day); a regular window keeps the ``raid-battles`` event
-    name. Choosing the rotation name for a special window would mislabel the
-    special date.
+    name. Standalone ``raid-day`` events with an identifiable boss that do not
+    overlap any ``raid-battles`` window are emitted as their own special
+    appearances.
     """
     shorts = list(short_events)
+    matched_short_ids: set[str] = set()
     appearances = []
     for window in windows:
         matched = _matching_short_event(window, shorts)
+        if matched is not None:
+            matched_short_ids.add(matched.event_id)
         event_name = (
             _clean_event_name(matched.name) if matched else window.event_name
         )
@@ -334,6 +413,22 @@ def mark_windows(
                 matched is not None,
                 event_name=event_name,
                 event_id=window.event_id,
+            )
+        )
+    for event in shorts:
+        if event.kind != "raid-day" or event.event_id in matched_short_ids:
+            continue
+        boss_name = short_event_boss(event)
+        if not boss_name:
+            continue
+        appearances.append(
+            BossAppearance(
+                boss_name=boss_name,
+                start=event.start,
+                end=event.end,
+                is_special_event=True,
+                event_name=_clean_event_name(event.name),
+                event_id=event.event_id,
             )
         )
     return appearances

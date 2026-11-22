@@ -18,6 +18,7 @@ from raids.sources.scrapedduck import (
     mark_windows,
     parse_events,
     parse_raids,
+    tier_from_event_name,
 )
 from raids.store import AppearanceRecord, store_records, upsert_pokemon
 
@@ -73,7 +74,9 @@ def run(conn, fetch_roster, fetch_events, *, now=None, logger=None) -> dict:
         if resolved is None:
             log_omitted("boss not in catalog", logger=logger, name=appearance.boss_name)
             continue
-        tier = tiers.get(appearance.boss_name.strip().lower())
+        tier = tiers.get(appearance.boss_name.strip().lower()) or tier_from_event_name(
+            appearance.event_name
+        )
         if tier is None:
             log_omitted(
                 "no valid roster tier for boss", logger=logger, name=appearance.boss_name

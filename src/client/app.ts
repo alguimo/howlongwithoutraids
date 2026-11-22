@@ -23,6 +23,12 @@ import {
 import { matches } from "../lib/search";
 import { parseSnapshot, parseSnapshotMeta } from "../lib/snapshot";
 import type { Language } from "../lib/types";
+import {
+  parseViewTab,
+  upcomingBosses,
+  upcomingTableHtml,
+  type ViewTab,
+} from "../lib/upcoming";
 import { formatRelativeUrl, parseUrlState } from "../lib/url-state";
 import { formatDayCount } from "../lib/view";
 import { mountDetails } from "./detail";
@@ -47,6 +53,11 @@ export function start(): void {
   const meta = parseSnapshotMeta(metaData);
   const headerEl = document.querySelector<HTMLElement>(".app-header");
   const mainEl = document.querySelector<HTMLElement>("main");
+  const tabsEl = document.querySelector<HTMLElement>(".view-tabs");
+  const tabEls = document.querySelectorAll<HTMLButtonElement>("[data-view-tab]");
+  const upcomingCountEl = document.querySelector<HTMLElement>("[data-upcoming-count]");
+  const historyPanelEl = document.getElementById("history-panel");
+  const upcomingPanelEl = document.getElementById("upcoming-panel");
   const filterBarEl = document.querySelector<HTMLElement>(".filter-bar");
   const tableWrapEl = document.getElementById("table-wrap");
   const listEl = document.getElementById("boss-list") as HTMLTableSectionElement | null;
@@ -64,6 +75,7 @@ export function start(): void {
   if (!listEl || !headEl || !emptyEl || !searchEl || !clearEl) return;
 
   const initialUrlState = parseUrlState(window.location.search);
+  let activeTab: ViewTab = parseViewTab(window.location.search);
   searchEl.value = initialUrlState.q;
   let filter: FilterChipId | null = initialUrlState.filter;
   let sort: SortMode = initialUrlState.sort;
@@ -99,6 +111,7 @@ export function start(): void {
 
     const headerHeight = headerEl?.getBoundingClientRect().height ?? 0;
     const mainPad = verticalPadding(mainEl);
+    const tabsHeight = tabsEl ? tabsEl.getBoundingClientRect().height + verticalMargins(tabsEl) : 0;
     const filterHeight = filterBarEl
       ? filterBarEl.getBoundingClientRect().height + verticalMargins(filterBarEl)
       : 0;
@@ -108,6 +121,7 @@ export function start(): void {
     const chromeHeight =
       headerHeight +
       mainPad +
+      tabsHeight +
       filterHeight +
       tableMargins +
       cachedTheadHeight +
@@ -169,10 +183,42 @@ export function start(): void {
 
   const detailsHandle = mountDetails(listEl);
 
+  const syncTabs = (): void => {
+    tabEls.forEach((btn) => {
+      const id = btn.getAttribute("data-view-tab");
+      btn.setAttribute("aria-selected", String(id === activeTab));
+    });
+    if (historyPanelEl) historyPanelEl.hidden = activeTab !== "history";
+    if (upcomingPanelEl) upcomingPanelEl.hidden = activeTab !== "upcoming";
+  };
+
   const render = (): void => {
     menuHandle.close();
     detailsHandle.closeAllDetails();
     const now = new Date();
+    const upcomingAll = upcomingBosses(bosses, now, lang);
+    if (upcomingCountEl) {
+      upcomingCountEl.textContent = String(upcomingAll.length);
+    }
+
+    syncTabs();
+
+    if (activeTab === "upcoming") {
+      const filteredUpcoming = upcomingAll.filter((boss) => matches(boss, searchEl.value, lang));
+      if (upcomingPanelEl) {
+        upcomingPanelEl.innerHTML = upcomingTableHtml(filteredUpcoming, now, lang);
+      }
+      syncSearchAffordances();
+      const relativeUrl = formatRelativeUrl(
+        window.location.pathname,
+        { q: searchEl.value, filter: null, sort: "recent", page: 1 },
+        window.location.hash,
+        "upcoming",
+      );
+      window.history.replaceState(null, "", relativeUrl);
+      return;
+    }
+
     const visible = sortBosses(bosses, now, lang, sort).filter(
       (boss) => matchesFilterChip(boss, filter, now) && matches(boss, searchEl.value, lang),
     );
@@ -200,6 +246,7 @@ export function start(): void {
       window.location.pathname,
       { q: searchEl.value, filter, sort, page },
       window.location.hash,
+      "history",
     );
     window.history.replaceState(null, "", relativeUrl);
   };
@@ -278,6 +325,16 @@ export function start(): void {
     page = 1;
     render();
     searchEl.focus();
+  });
+
+  tabEls.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const nextTab = btn.getAttribute("data-view-tab");
+      if (nextTab !== "history" && nextTab !== "upcoming") return;
+      if (nextTab === activeTab) return;
+      activeTab = nextTab;
+      render();
+    });
   });
 
   chipEls.forEach((btn) => {

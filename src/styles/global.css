@@ -271,6 +271,57 @@ main {
   color: var(--text-primary);
 }
 
+/* Pestañas de vista (Historial / Próximas) */
+.view-tabs {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.view-tab {
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+}
+
+.view-tab:hover {
+  color: var(--text-primary);
+}
+
+.view-tab[aria-selected="true"] {
+  color: var(--text-primary);
+  border-bottom-color: var(--text-primary);
+}
+
+.view-tab:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring-focus);
+  border-radius: 0.25rem;
+}
+
+.view-tab-count {
+  background-color: var(--bg-surface-hover);
+  color: var(--text-secondary);
+}
+
+.view-tab[aria-selected="true"] .view-tab-count {
+  background-color: var(--status-upcoming-bg);
+  color: var(--status-upcoming-fg);
+}
+
+.upcoming-countdown {
+  color: var(--status-upcoming-fg);
+}
+
+.upcoming-range,
+.upcoming-event,
+.upcoming-empty {
+  color: var(--text-muted);
+}
+
+.upcoming-empty {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+}
+
 /* FilterBar: chips temáticos, contador vivo y selector de orden */
 .filter-chip {
   background-color: var(--bg-surface);

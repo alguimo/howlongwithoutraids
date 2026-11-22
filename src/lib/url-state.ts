@@ -36,8 +36,9 @@ export function parseUrlState(search: string): UrlState {
   };
 }
 
-export function buildUrlSearch(state: UrlState): string {
+export function buildUrlSearch(state: UrlState, tab?: "history" | "upcoming"): string {
   const params = new URLSearchParams();
+  if (tab === "upcoming") params.set("tab", "upcoming");
   const q = state.q.trim();
   if (q) params.set("q", q);
   if (state.filter !== null && isFilterChipId(state.filter)) {
@@ -53,6 +54,11 @@ export function buildUrlSearch(state: UrlState): string {
   return query ? `?${query}` : "";
 }
 
-export function formatRelativeUrl(pathname: string, state: UrlState, hash: string = ""): string {
-  return `${pathname || "/"}${buildUrlSearch(state)}${hash}`;
+export function formatRelativeUrl(
+  pathname: string,
+  state: UrlState,
+  hash: string = "",
+  tab?: "history" | "upcoming",
+): string {
+  return `${pathname || "/"}${buildUrlSearch(state, tab)}${hash}`;
 }

@@ -3,7 +3,7 @@ export type Theme = (typeof THEMES)[number];
 
 export const THEME_STORAGE_KEY = "hlwr_theme";
 export const LIGHT_THEME_COLOR = "#f6f5f1";
-export const DARK_THEME_COLOR = "#0b101b";
+export const DARK_THEME_COLOR = "#121110";
 
 export function isTheme(value: unknown): value is Theme {
   return value === "light" || value === "dark";

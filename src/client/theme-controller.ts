@@ -9,25 +9,10 @@ import {
   type Theme,
 } from "../lib/theme";
 import type { Language } from "../lib/types";
+import { readStorage, writeStorage } from "./storage";
 
 export interface ThemeControllerHandle {
   sync: (lang: Language) => void;
-}
-
-function readStoredTheme(): string | null {
-  try {
-    return window.localStorage.getItem(THEME_STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function writeStoredTheme(theme: Theme): void {
-  try {
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-  } catch {
-    /* storage unavailable; keep in-memory theme */
-  }
 }
 
 export function mountThemeController(initialLang: Language): ThemeControllerHandle {
@@ -36,7 +21,7 @@ export function mountThemeController(initialLang: Language): ThemeControllerHand
   const media = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
 
   let currentLang = initialLang;
-  const initialStored = readStoredTheme();
+  const initialStored = readStorage(THEME_STORAGE_KEY);
   let hasManualPreference = isTheme(initialStored);
   let currentTheme: Theme = resolveTheme(initialStored, media ? media.matches : true);
 
@@ -53,7 +38,7 @@ export function mountThemeController(initialLang: Language): ThemeControllerHand
   button?.addEventListener("click", () => {
     currentTheme = nextTheme(currentTheme);
     hasManualPreference = true;
-    writeStoredTheme(currentTheme);
+    writeStorage(THEME_STORAGE_KEY, currentTheme);
     apply();
   });
 

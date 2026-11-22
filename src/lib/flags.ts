@@ -1,7 +1,8 @@
+import { LANGUAGES } from "./i18n";
 import type { Language } from "./types";
 
 /** Orden fijo del desplegable de idioma: el de los catálogos. */
-export const FLAG_LANG: Language[] = ["es", "en", "fr"];
+export const FLAG_LANG: readonly Language[] = LANGUAGES;
 
 /** Proporción 3:2, la de todas las banderas de estado. */
 const VIEW_BOX = 'viewBox="0 0 60 40"';

@@ -1,5 +1,6 @@
 import { CATALOGS, LANGUAGES, t } from "./i18n";
 import { localizeName } from "./names";
+import { normalizeText } from "./text";
 import type { BossSnapshot, Language } from "./types";
 
 /**
@@ -103,13 +104,6 @@ export function variantLabel(lang: Language, variant: string): string | null {
   return label === key ? null : label;
 }
 
-function normalizeLabel(text: string): string {
-  return text
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-}
-
 function containsWord(haystack: string, needle: string): boolean {
   const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`).test(haystack);
@@ -117,13 +111,13 @@ function containsWord(haystack: string, needle: string): boolean {
 
 function formSynonyms(form: string): string[] {
   const synonyms = new Set<string>([
-    normalizeLabel(form),
-    normalizeLabel(form.replace(/-/g, " ")),
+    normalizeText(form),
+    normalizeText(form.replace(/-/g, " ")),
   ]);
   const entry = FORM_LABELS[form];
   if (entry) {
     for (const lang of LANGUAGES) {
-      if (entry[lang]) synonyms.add(normalizeLabel(entry[lang]));
+      if (entry[lang]) synonyms.add(normalizeText(entry[lang]));
     }
   }
   return [...synonyms];
@@ -135,11 +129,11 @@ function variantSynonyms(variant: string): string[] {
   if (key) {
     for (const lang of LANGUAGES) {
       const label = CATALOGS[lang][key];
-      if (label) synonyms.add(normalizeLabel(label));
+      if (label) synonyms.add(normalizeText(label));
     }
   }
   for (const extra of EXTRA_VARIANT_SYNONYMS[variant] ?? []) {
-    synonyms.add(normalizeLabel(extra));
+    synonyms.add(normalizeText(extra));
   }
   return [...synonyms];
 }
@@ -148,9 +142,9 @@ function alreadyHasLabel(
   labels: readonly string[],
   sources: readonly string[],
 ): boolean {
-  const haystacks = sources.map(normalizeLabel);
+  const haystacks = sources.map(normalizeText);
   return labels.some((label) => {
-    const needle = normalizeLabel(label);
+    const needle = normalizeText(label);
     return needle.length > 0 && haystacks.some((h) => containsWord(h, needle));
   });
 }

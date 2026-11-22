@@ -11,7 +11,6 @@ export type RaidEggType =
 
 export interface TierBadgeStyle {
   badge: string;
-  text: string;
 }
 
 /** Mapea el tier de incursión al tipo de huevo correspondiente en Pokémon GO. */
@@ -48,48 +47,8 @@ export function tierToEggType(tier: string | null | undefined): RaidEggType | nu
 /** Devuelve las clases semánticas para el badge temático por tipo de huevo,
  *  resueltas en CSS para garantizar contraste WCAG AA ≥ 4.5:1 en modo claro y oscuro. */
 export function tierBadgeStyles(type: RaidEggType | null): TierBadgeStyle {
-  switch (type) {
-    case "legendary":
-      return {
-        badge: "tier-badge tier-badge-legendary",
-        text: "tier-text-legendary",
-      };
-    case "mega":
-      return {
-        badge: "tier-badge tier-badge-mega",
-        text: "tier-text-mega",
-      };
-    case "shadow":
-      return {
-        badge: "tier-badge tier-badge-shadow",
-        text: "tier-text-shadow",
-      };
-    case "normal":
-      return {
-        badge: "tier-badge tier-badge-normal",
-        text: "tier-text-normal",
-      };
-    case "rare":
-      return {
-        badge: "tier-badge tier-badge-rare",
-        text: "tier-text-rare",
-      };
-    case "primal":
-      return {
-        badge: "tier-badge tier-badge-primal",
-        text: "tier-text-primal",
-      };
-    case "elite":
-      return {
-        badge: "tier-badge tier-badge-elite",
-        text: "tier-text-elite",
-      };
-    default:
-      return {
-        badge: "tier-badge tier-badge-default",
-        text: "tier-text-default",
-      };
-  }
+  const variant = type ?? "default";
+  return { badge: `tier-badge tier-badge-${variant}` };
 }
 
 const EGG_PATH =

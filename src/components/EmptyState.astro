@@ -5,33 +5,15 @@ import { t } from "../lib/i18n";
 <div
   id="empty"
   hidden
-  class="empty-state mt-4 flex flex-col items-center justify-center gap-3 rounded-xl px-6 py-10 text-center"
+  class="empty-state mt-4 flex flex-col items-center justify-center gap-2.5 rounded-lg px-6 py-8 text-center"
 >
-  <svg
-    class="empty-illustration h-12 w-12"
-    viewBox="0 0 48 48"
-    fill="none"
-    aria-hidden="true"
-    focusable="false"
-  >
-    <circle cx="24" cy="24" r="19" stroke="currentColor" stroke-width="1.75" stroke-dasharray="3 3" opacity="0.45" />
-    <circle cx="24" cy="24" r="13" stroke="currentColor" stroke-width="2" />
-    <path d="M11 24h8.5M28.5 24H37" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-    <circle cx="24" cy="24" r="4.5" stroke="currentColor" stroke-width="2" />
-    <circle cx="24" cy="24" r="1.5" fill="currentColor" />
-  </svg>
-  <div class="space-y-1">
-    <p class="empty-title text-base font-medium" data-i18n="no_results">{t("en", "no_results")}</p>
-    <p class="empty-hint text-xs" data-i18n="no_results_hint">{t("en", "no_results_hint")}</p>
-  </div>
+  <p class="empty-title text-sm font-medium" data-i18n="no_results">{t("en", "no_results")}</p>
+  <p class="empty-hint text-xs" data-i18n="no_results_hint">{t("en", "no_results_hint")}</p>
   <button
     id="clear"
     type="button"
-    class="empty-clear-btn mt-1 inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-medium outline-none transition-colors"
+    class="empty-clear-btn mt-1 inline-flex items-center rounded-md px-3 py-1.5 text-xs font-medium outline-none transition-colors"
   >
-    <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-      <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
-    </svg>
     <span data-i18n="clear">{t("en", "clear")}</span>
   </button>
 </div>

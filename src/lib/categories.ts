@@ -1,4 +1,5 @@
 import { isActive } from "./counter";
+import { normalizeText } from "./text";
 import type { BossSnapshot } from "./types";
 
 /**
@@ -85,13 +86,6 @@ export const CATEGORY_PREDICATES: Record<
   baby: (boss) => boss.is_baby === true,
 };
 
-function normalizeAlias(text: string): string {
-  return text
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-}
-
 const ALIAS_INDEX: ReadonlyMap<string, CategoryId> = (() => {
   const index = new Map<string, CategoryId>();
   for (const [id, aliases] of Object.entries(CATEGORY_ALIASES) as [
@@ -99,14 +93,14 @@ const ALIAS_INDEX: ReadonlyMap<string, CategoryId> = (() => {
     readonly string[],
   ][]) {
     for (const alias of aliases) {
-      index.set(normalizeAlias(alias), id);
+      index.set(normalizeText(alias), id);
     }
   }
   return index;
 })();
 
 export function matchCategory(query: string): CategoryId | null {
-  const normalized = normalizeAlias(query).trim();
+  const normalized = normalizeText(query).trim();
   if (!normalized) return null;
   return ALIAS_INDEX.get(normalized) ?? null;
 }

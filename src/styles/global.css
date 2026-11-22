@@ -1,74 +1,81 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
- * Spec 010 RF-01, RF-02 — Sistema Dual de Temas (Oscuro Pizarra-Noche y
- * Claro Piedra Cálida). Todos los pares texto/superficie cumplen WCAG 2.1 AA
- * (≥ 4.5:1) verificados matemáticamente en `tests/contrast.test.ts`.
+ * Sistema Dual de Temas: Oscuro Carbón Cálido (#121110) y Claro Piedra Cálida
+ * (#f6f5f1). Todos los pares texto/superficie cumplen WCAG 2.1 AA (≥ 4.5:1)
+ * verificados matemáticamente en `tests/contrast.test.ts`.
  * ------------------------------------------------------------------------- */
 :root,
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg-page: #0b101b;
-  --bg-header: #111827;
-  --bg-surface: #141d2e;
-  --bg-surface-hover: #1e293b;
-  --bg-row-hover: #131c2e;
-  --border-subtle: #1e293b;
-  --border-control: #334155;
-  --ring-focus: #64748b;
+  --bg-page: #121110;
+  --bg-header: #191816;
+  --bg-surface: #1d1b19;
+  --bg-surface-hover: #282522;
+  --bg-row-hover: #1a1816;
+  --border-subtle: #292622;
+  --border-control: #3d3832;
+  --ring-focus: #8a8278;
 
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #8e9fb7;
+  --text-primary: #f5f3ef;
+  --text-secondary: #b8b2a7;
+  --text-muted: #a39c90;
 
-  --drought-mild: #94a3b8;
-  --drought-medium: #e2e8f0;
-  --drought-long: #fbbf24;
-  --drought-extreme: #fb7185;
+  --drought-mild: #a39c90;
+  --drought-medium: #e7e4dd;
+  --drought-long: #f5b942;
+  --drought-extreme: #f87171;
 
-  --status-active-bg: #062e24;
+  --status-active-bg: #112a21;
   --status-active-fg: #6ee7b7;
-  --status-active-border: #065f46;
+  --status-active-border: #1e5642;
   --status-active-dot: #34d399;
 
-  --status-upcoming-bg: #2e1f05;
+  --status-upcoming-bg: #2c2110;
   --status-upcoming-fg: #fcd34d;
-  --status-upcoming-border: #78350f;
+  --status-upcoming-border: #664818;
 
   --header-stat-fg: #6ee7b7;
-  --header-stat-icon: #34d399;
 
-  --tier-t1-bg: #381028;
-  --tier-t1-fg: #f9a8d4;
-  --tier-t1-border: #831843;
+  --tier-t1-bg: #241b1f;
+  --tier-t1-fg: #e7b5c8;
+  --tier-t1-border: #4d323e;
 
-  --tier-t3-bg: #332006;
-  --tier-t3-fg: #fcd34d;
-  --tier-t3-border: #78350f;
+  --tier-t3-bg: #251f16;
+  --tier-t3-fg: #ebd09b;
+  --tier-t3-border: #524228;
 
-  --tier-t5-bg: #1b1a3a;
-  --tier-t5-fg: #fde68a;
-  --tier-t5-border: #4338ca;
+  --tier-t5-bg: #1f1e28;
+  --tier-t5-fg: #e9d9a4;
+  --tier-t5-border: #434059;
 
-  --tier-mega-bg: #082a36;
-  --tier-mega-fg: #67e8f9;
-  --tier-mega-border: #155e75;
+  --tier-mega-bg: #172326;
+  --tier-mega-fg: #9bdbe6;
+  --tier-mega-border: #2c4a52;
 
-  --tier-primal-bg: #3b1119;
-  --tier-primal-fg: #fda4af;
-  --tier-primal-border: #9f1239;
+  --tier-primal-bg: #291a1d;
+  --tier-primal-fg: #f0b0ba;
+  --tier-primal-border: #5c3139;
 
-  --tier-shadow-bg: #27103d;
-  --tier-shadow-fg: #d8b4fe;
-  --tier-shadow-border: #6b21a8;
+  --tier-shadow-bg: #221b29;
+  --tier-shadow-fg: #d2b9eb;
+  --tier-shadow-border: #49375c;
 
-  --tier-elite-bg: #381217;
-  --tier-elite-fg: #fca5a5;
-  --tier-elite-border: #991b1b;
+  --tier-elite-bg: #291a1a;
+  --tier-elite-fg: #f0b4b4;
+  --tier-elite-border: #5c3333;
 
-  --tier-default-bg: #1e293b;
-  --tier-default-fg: #cbd5e1;
-  --tier-default-border: #334155;
+  --tier-default-bg: #22201d;
+  --tier-default-fg: #d6d0c7;
+  --tier-default-border: #3d3832;
+
+  --chip-ub-bg: #17202b;
+  --chip-ub-fg: #93c5fd;
+  --chip-ub-border: #2c435e;
+
+  --chip-mythical-bg: #271a23;
+  --chip-mythical-fg: #f0abfc;
+  --chip-mythical-border: #57314c;
 
   --shadow-floating: 0 12px 28px rgb(0 0 0 / 0.55);
 }
@@ -81,15 +88,15 @@
   --bg-surface-hover: #eeece6;
   --bg-row-hover: #efede7;
   --border-subtle: #e2dfd7;
-  --border-control: #cbd5e1;
-  --ring-focus: #475569;
+  --border-control: #cbc6bc;
+  --ring-focus: #57534e;
 
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #526075;
+  --text-primary: #1c1917;
+  --text-secondary: #57534e;
+  --text-muted: #615c56;
 
-  --drought-mild: #475569;
-  --drought-medium: #0f172a;
+  --drought-mild: #57534e;
+  --drought-medium: #1c1917;
   --drought-long: #92400e;
   --drought-extreme: #be123c;
 
@@ -103,41 +110,48 @@
   --status-upcoming-border: #fcd34d;
 
   --header-stat-fg: #065f46;
-  --header-stat-icon: #059669;
 
-  --tier-t1-bg: #fce7f3;
-  --tier-t1-fg: #9d174d;
-  --tier-t1-border: #f9a8d4;
+  --tier-t1-bg: #f9f1f4;
+  --tier-t1-fg: #8c224e;
+  --tier-t1-border: #e7c9d4;
 
-  --tier-t3-bg: #fef3c7;
-  --tier-t3-fg: #92400e;
-  --tier-t3-border: #fcd34d;
+  --tier-t3-bg: #f9f4e8;
+  --tier-t3-fg: #854d0e;
+  --tier-t3-border: #e5d5b0;
 
-  --tier-t5-bg: #e0e7ff;
-  --tier-t5-fg: #312e81;
-  --tier-t5-border: #a5b4fc;
+  --tier-t5-bg: #f1f2f9;
+  --tier-t5-fg: #3730a3;
+  --tier-t5-border: #cdd0e8;
 
-  --tier-mega-bg: #cffafe;
+  --tier-mega-bg: #eef7f8;
   --tier-mega-fg: #155e75;
-  --tier-mega-border: #67e8f9;
+  --tier-mega-border: #bcdce0;
 
-  --tier-primal-bg: #ffe4e6;
+  --tier-primal-bg: #faf0f2;
   --tier-primal-fg: #9f1239;
-  --tier-primal-border: #fda4af;
+  --tier-primal-border: #e8c5cc;
 
-  --tier-shadow-bg: #f3e8ff;
+  --tier-shadow-bg: #f5f0fa;
   --tier-shadow-fg: #581c87;
-  --tier-shadow-border: #d8b4fe;
+  --tier-shadow-border: #d8c5eb;
 
-  --tier-elite-bg: #fee2e2;
+  --tier-elite-bg: #faf0f0;
   --tier-elite-fg: #991b1b;
-  --tier-elite-border: #fca5a5;
+  --tier-elite-border: #e8c4c4;
 
-  --tier-default-bg: #f1f5f9;
-  --tier-default-fg: #334155;
-  --tier-default-border: #cbd5e1;
+  --tier-default-bg: #f3f1ec;
+  --tier-default-fg: #44403c;
+  --tier-default-border: #d6d3cd;
 
-  --shadow-floating: 0 12px 28px rgb(15 23 42 / 0.14);
+  --chip-ub-bg: #eff6ff;
+  --chip-ub-fg: #1d4ed8;
+  --chip-ub-border: #bfdbfe;
+
+  --chip-mythical-bg: #fdf2f8;
+  --chip-mythical-fg: #9d174d;
+  --chip-mythical-border: #fbcfe8;
+
+  --shadow-floating: 0 12px 28px rgb(28 25 23 / 0.14);
 }
 
 /* Garantiza que el atributo HTML `hidden` gane siempre sobre `flex`/`inline-flex` */
@@ -228,10 +242,6 @@ main {
   color: var(--header-stat-fg);
 }
 
-.header-raid-icon {
-  color: var(--header-stat-icon);
-}
-
 /* Buscador */
 .search-icon {
   color: var(--text-muted);
@@ -259,12 +269,6 @@ main {
 
 .search-clear-btn:hover {
   color: var(--text-primary);
-}
-
-.search-kbd {
-  background-color: var(--bg-surface-hover);
-  border: 1px solid var(--border-control);
-  color: var(--text-muted);
 }
 
 /* FilterBar: chips temáticos, contador vivo y selector de orden */
@@ -312,15 +316,15 @@ main {
 }
 
 .filter-chip[data-filter-chip="ultra_beast"][aria-pressed="true"] {
-  background-color: var(--tier-mega-bg);
-  border-color: var(--tier-mega-border);
-  color: var(--tier-mega-fg);
+  background-color: var(--chip-ub-bg);
+  border-color: var(--chip-ub-border);
+  color: var(--chip-ub-fg);
 }
 
 .filter-chip[data-filter-chip="mythical"][aria-pressed="true"] {
-  background-color: var(--tier-t1-bg);
-  border-color: var(--tier-t1-border);
-  color: var(--tier-t1-fg);
+  background-color: var(--chip-mythical-bg);
+  border-color: var(--chip-mythical-border);
+  color: var(--chip-mythical-fg);
 }
 
 .results-count,
@@ -490,10 +494,6 @@ tbody .boss-row {
 .empty-state {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-}
-
-.empty-illustration {
-  color: var(--text-muted);
 }
 
 .empty-title {

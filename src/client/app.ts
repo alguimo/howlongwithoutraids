@@ -5,7 +5,6 @@ import { isActive } from "../lib/counter";
 import {
   footerUpdatedText,
   listHtml,
-  paginationHtml,
   paginationView,
   tableHeadHtml,
 } from "../lib/html";
@@ -28,23 +27,8 @@ import { formatRelativeUrl, parseUrlState } from "../lib/url-state";
 import { formatDayCount } from "../lib/view";
 import { mountDetails } from "./detail";
 import { mountLanguageMenu } from "./language-menu";
+import { readStorage, writeStorage } from "./storage";
 import { mountThemeController } from "./theme-controller";
-
-function storedLanguage(): string | null {
-  try {
-    return window.localStorage.getItem(STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function persistLanguage(lang: Language): void {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, lang);
-  } catch {
-    /* storage unavailable; keep the in-memory language */
-  }
-}
 
 function verticalMargins(el: HTMLElement | null): number {
   if (!el) return 0;
@@ -70,7 +54,6 @@ export function start(): void {
   const emptyEl = document.getElementById("empty");
   const searchEl = document.getElementById("search") as HTMLInputElement | null;
   const searchClearBtn = document.getElementById("search-clear-btn") as HTMLButtonElement | null;
-  const searchKbd = document.getElementById("search-kbd");
   const clearEl = document.getElementById("clear");
   const sortEl = document.getElementById("sort") as (HTMLElement & { value: string }) | null;
   const chipEls = document.querySelectorAll<HTMLButtonElement>("[data-filter-chip]");
@@ -88,7 +71,7 @@ export function start(): void {
   if (sortEl) sortEl.value = sort;
 
   let totalPages = 1;
-  let lang: Language = resolveInitialLanguage(navigator.language, storedLanguage());
+  let lang: Language = resolveInitialLanguage(navigator.language, readStorage(STORAGE_KEY));
   const themeHandle = mountThemeController(lang);
 
   let cachedTheadHeight = 32;
@@ -140,10 +123,9 @@ export function start(): void {
   const syncSearchAffordances = (): void => {
     const hasSearch = searchEl.value.trim().length > 0;
     if (searchClearBtn) searchClearBtn.hidden = !hasSearch;
-    if (searchKbd) searchKbd.hidden = hasSearch || document.activeElement === searchEl;
   };
 
-  const applyStaticText = (): void => {
+  const applyStaticText = (now: Date = new Date()): void => {
     document.documentElement.lang = lang;
     document.querySelectorAll<HTMLElement>("[data-i18n]").forEach((el) => {
       el.textContent = t(lang, el.dataset.i18n!);
@@ -161,9 +143,11 @@ export function start(): void {
     if (updatedEl) updatedEl.textContent = updated ?? "";
     const activeEl = document.querySelector<HTMLElement>("[data-active-raids-count]");
     if (activeEl) {
-      const activeCount = bosses.filter((b) => isActive(b, new Date())).length;
+      const activeCount = bosses.filter((b) => isActive(b, now)).length;
       activeEl.textContent = t(lang, "active_raids_count", { count: activeCount });
     }
+    menuHandle.sync(lang);
+    themeHandle.sync(lang);
   };
 
   const syncChips = (): void => {
@@ -176,8 +160,9 @@ export function start(): void {
   const menuHandle = mountLanguageMenu({
     onSelect: (next) => {
       lang = next;
-      persistLanguage(lang);
+      writeStorage(STORAGE_KEY, lang);
       page = 1;
+      applyStaticText();
       render();
     },
   });
@@ -207,11 +192,8 @@ export function start(): void {
       });
     }
 
-    menuHandle.sync(lang);
-    themeHandle.sync(lang);
     syncChips();
     renderPagination(state);
-    applyStaticText();
     syncSearchAffordances();
 
     const relativeUrl = formatRelativeUrl(
@@ -264,9 +246,6 @@ export function start(): void {
     page = 1;
     render();
   });
-
-  searchEl.addEventListener("focus", syncSearchAffordances);
-  searchEl.addEventListener("blur", syncSearchAffordances);
 
   searchClearBtn?.addEventListener("click", () => {
     searchEl.value = "";
@@ -351,6 +330,7 @@ export function start(): void {
     }
   });
 
+  applyStaticText();
   render();
   // Segunda comprobación tras pintar fuentes/layout inicial por si la altura de fila difiere del SSR
   const settledSize = measurePageSize();

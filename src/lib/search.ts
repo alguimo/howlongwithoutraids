@@ -1,13 +1,9 @@
 import { matchCategory, matchesCategory } from "./categories";
 import { baseName, displayName, isBaseForm } from "./display";
+import { normalizeText } from "./text";
 import type { BossSnapshot, Language } from "./types";
 
-export function normalize(text: string): string {
-  return text
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-}
+export const normalize = normalizeText;
 
 /**
  * ¿Coincide el jefe con la consulta? (004 RF-11, RF-14, RF-15; 010 RF-08)

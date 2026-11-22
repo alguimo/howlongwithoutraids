@@ -33,7 +33,7 @@ const rows = listHtml(pageSlice(sortBosses(bosses, now, "en"), 1), now, "en");
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>How Long Without Raids</title>
     <meta name="description" content="Check how long each Pokémon has gone without appearing in Pokémon GO raids. Fast, clean, and up to date." />
-    <meta name="theme-color" content="#0b101b" />
+    <meta name="theme-color" content="#121110" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta property="og:title" content="How Long Without Raids" />
     <meta property="og:description" content="Check how long each Pokémon has gone without appearing in Pokémon GO raids." />
@@ -42,7 +42,7 @@ const rows = listHtml(pageSlice(sortBosses(bosses, now, "en"), 1), now, "en");
       (function() {
         var theme = "dark";
         try {
-          var lang = localStorage.getItem("hlwr_lang");
+          var lang = localStorage.getItem("hlwr:lang");
           if (lang === "es" || lang === "en" || lang === "fr") {
             document.documentElement.lang = lang;
           }
@@ -55,7 +55,7 @@ const rows = listHtml(pageSlice(sortBosses(bosses, now, "en"), 1), now, "en");
         } catch (e) {}
         document.documentElement.dataset.theme = theme;
         var meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) meta.setAttribute("content", theme === "light" ? "#f6f5f1" : "#0b101b");
+        if (meta) meta.setAttribute("content", theme === "light" ? "#f6f5f1" : "#121110");
       })();
     </script>
   </head>
@@ -72,10 +72,7 @@ const rows = listHtml(pageSlice(sortBosses(bosses, now, "en"), 1), now, "en");
             <div class="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs sm:text-sm">
               <p class="header-subtitle" data-i18n="subtitle">{t("en", "subtitle")}</p>
               <span class="header-subtitle hidden sm:inline" aria-hidden="true">·</span>
-              <span class="header-raid-stat inline-flex items-center gap-1 font-medium tabular-nums">
-                <svg class="header-raid-icon h-3.5 w-3.5 shrink-0" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-                  <path d="M8 1.2l1.85 3.95 4.35.55-3.2 3 0.85 4.3L8 10.9l-3.85 2.1.85-4.3-3.2-3 4.35-.55L8 1.2z" />
-                </svg>
+              <span class="header-raid-stat font-medium tabular-nums">
                 <span data-active-raids-count>{t("en", "active_raids_count", { count: activeBossesCount })}</span>
               </span>
             </div>

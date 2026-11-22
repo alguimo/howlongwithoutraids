@@ -1,11 +1,10 @@
+import { LANGUAGES } from "./i18n";
 import type { Language } from "./types";
 
 export const STORAGE_KEY = "hlwr:lang";
 
-const SUPPORTED: Language[] = ["es", "en", "fr"];
-
 function isLanguage(value: unknown): value is Language {
-  return SUPPORTED.includes(value as Language);
+  return LANGUAGES.includes(value as Language);
 }
 
 export interface LanguageStorage {

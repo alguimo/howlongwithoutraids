@@ -48,8 +48,10 @@ export function detailRowId(key: string): string {
   return `detail-${key}`;
 }
 
-const HEAD_CELL =
-  'scope="col" role="columnheader" class="table-head-cell px-3 py-1.5 text-left text-xs font-medium uppercase tracking-wide"';
+const HEAD_CELL_BASE =
+  'scope="col" role="columnheader" class="table-head-cell px-3 py-1.5 text-xs font-medium uppercase tracking-wide';
+const HEAD_CELL = `${HEAD_CELL_BASE} text-left"`;
+const HEAD_CELL_RIGHT = `${HEAD_CELL_BASE} text-left md:text-right"`;
 
 export function tableHeadHtml(lang: Language = "en", sort: SortMode = "recent"): string {
   const spriteHeader = `<th ${HEAD_CELL}><span class="sr-only">${escapeHtml(t(lang, "col_image"))}</span></th>`;
@@ -61,9 +63,9 @@ export function tableHeadHtml(lang: Language = "en", sort: SortMode = "recent"):
   const statusSortState =
     sort === "drought" ? "descending" : sort === "recent" ? "ascending" : "none";
   const statusGlyph = sort === "drought" ? " ↓" : sort === "recent" ? " ↑" : "";
-  const statusHeader = `<th ${HEAD_CELL} aria-sort="${statusSortState}"><button type="button" data-sort-col="status" class="sort-head-btn inline-flex items-center gap-1 uppercase tracking-wide">${escapeHtml(t(lang, "col_status"))}<span aria-hidden="true">${statusGlyph}</span></button></th>`;
+  const statusHeader = `<th ${HEAD_CELL_RIGHT} aria-sort="${statusSortState}"><button type="button" data-sort-col="status" class="sort-head-btn inline-flex items-center gap-1 uppercase tracking-wide">${escapeHtml(t(lang, "col_status"))}<span aria-hidden="true">${statusGlyph}</span></button></th>`;
 
-  const dateHeader = `<th ${HEAD_CELL}>${escapeHtml(t(lang, "col_date"))}</th>`;
+  const dateHeader = `<th ${HEAD_CELL_RIGHT}>${escapeHtml(t(lang, "col_date"))}</th>`;
   const tierHeader = `<th ${HEAD_CELL}>${escapeHtml(t(lang, "col_tier"))}</th>`;
 
   return `<tr role="row">${spriteHeader}${nameHeader}${statusHeader}${dateHeader}${tierHeader}</tr>`;
@@ -111,7 +113,7 @@ export function rowHtml(boss: BossSnapshot, now: Date, lang: Language): string {
     `<span role="img" aria-label="${escapeHtml(view.name)}" class="${hidden ? "hidden " : ""}boss-initials flex h-9 w-9 items-center justify-center rounded-lg text-xs font-semibold">${escapeHtml(initials(baseName(boss, lang)))}</span>`;
 
   const avatar = boss.sprite_url
-    ? `<img src="${escapeHtml(boss.sprite_url)}" alt="${escapeHtml(view.name)}" width="36" height="36" onerror="this.classList.add('hidden');this.nextElementSibling?.classList.remove('hidden')" class="boss-sprite h-9 w-9 object-contain" />${initialsFallback(true)}`
+    ? `<img src="${escapeHtml(boss.sprite_url)}" alt="${escapeHtml(view.name)}" width="36" height="36" decoding="async" onerror="this.classList.add('hidden');this.nextElementSibling?.classList.remove('hidden')" class="boss-sprite h-9 w-9 object-contain" />${initialsFallback(true)}`
     : initialsFallback(false);
 
   let statusContent: string;
@@ -148,8 +150,8 @@ export function rowHtml(boss: BossSnapshot, now: Date, lang: Language): string {
   return `<tr class="boss-row align-middle" role="row">
   <td role="cell" class="px-2.5 py-1" data-label="${escapeHtml(t(lang, "col_image"))}">${avatar}</td>
   <td role="cell" class="boss-name-cell px-2.5 py-1 font-medium" data-label="${escapeHtml(t(lang, "col_name"))}"><span class="dex-num mr-1.5 text-xs font-normal tabular-nums"><span class="dex-hash">#</span>${formatDexNumber(boss.dex_number)}</span>${escapeHtml(view.name)}</td>
-  <td role="cell" class="px-2.5 py-1 text-sm" data-label="${escapeHtml(t(lang, "col_status"))}"><span class="flex items-center gap-2">${statusContent}${upcomingTag}</span></td>
-  <td role="cell" class="px-2.5 py-1 text-sm" data-label="${escapeHtml(t(lang, "col_date"))}">
+  <td role="cell" class="px-2.5 py-1 text-sm md:text-right" data-label="${escapeHtml(t(lang, "col_status"))}"><span class="flex items-center gap-2 md:justify-end">${statusContent}${upcomingTag}</span></td>
+  <td role="cell" class="px-2.5 py-1 text-sm md:text-right" data-label="${escapeHtml(t(lang, "col_date"))}">
     <button type="button" data-detail aria-expanded="false" aria-controls="${detailId}" class="date-trigger underline decoration-dotted underline-offset-4 outline-none">${escapeHtml(dateLabel)}</button>
   </td>
   <td role="cell" class="px-2.5 py-1 text-xs" data-label="${escapeHtml(t(lang, "col_tier"))}">${tierCell}</td>

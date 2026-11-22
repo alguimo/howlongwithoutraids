@@ -17,10 +17,11 @@
  */
 
 import { flagSvg } from "../lib/flags";
+import { LANGUAGES } from "../lib/i18n";
 import type { Language } from "../lib/types";
 
 /** Orden de las opciones. Igual que el marcado de `LanguageSelector.astro`. */
-export const MENU_LANGS: readonly Language[] = ["es", "en", "fr"];
+export const MENU_LANGS: readonly Language[] = LANGUAGES;
 
 /** Estado del desplegable: si está abierto y qué opción está activa. */
 export interface MenuState {

@@ -26,7 +26,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16
+        image: postgres:17
         env:
           POSTGRES_USER: raids
           POSTGRES_PASSWORD: raids
@@ -34,7 +34,7 @@ jobs:
         ports:
           - 5433:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U raids -d raids"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -74,7 +74,7 @@ jobs:
         run: |
           if gh release download data-state -p raids-db.sql.gz -O /tmp/raids-db.sql.gz 2>/dev/null; then
             echo "Restoring persisted database dump..."
-            gunzip -c /tmp/raids-db.sql.gz | psql "$RAIDS_DSN" -v ON_ERROR_STOP=1 >/dev/null
+            gunzip -c /tmp/raids-db.sql.gz | sed '/^SET transaction_timeout = /d' | psql "$RAIDS_DSN" -v ON_ERROR_STOP=1 >/dev/null
             psql "$RAIDS_DSN" -c "ALTER TABLE raid_appearances ADD COLUMN IF NOT EXISTS is_local_time boolean NOT NULL DEFAULT false;"
           else
             echo "No persisted data-state release found; bootstrapping schema, pokedex, and full history..."
